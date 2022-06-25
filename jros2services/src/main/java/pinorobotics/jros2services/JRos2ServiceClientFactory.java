@@ -18,7 +18,9 @@
 package pinorobotics.jros2services;
 
 import id.jros2client.JRos2Client;
+import id.jros2client.impl.DdsNameMapper;
 import id.jros2client.impl.JRos2ClientImpl;
+import id.jrosclient.utils.RosNameUtils;
 import id.jrosmessages.Message;
 import pinorobotics.jros2services.service_msgs.ServiceDefinition;
 
@@ -28,6 +30,8 @@ import pinorobotics.jros2services.service_msgs.ServiceDefinition;
  * @author lambdaprime intid@protonmail.com
  */
 public class JRos2ServiceClientFactory {
+
+    private DdsNameMapper nameMapper = new DdsNameMapper(new RosNameUtils());
 
     /**
      * Create client for ROS2 Services
@@ -42,7 +46,7 @@ public class JRos2ServiceClientFactory {
             JRos2Client client, ServiceDefinition<R, A> serviceDefinition, String serviceName) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceClient<>(
-                    ros2Client.getRtpsTalkClient(), serviceDefinition, serviceName);
+                    ros2Client.getRtpsTalkClient(), serviceDefinition, serviceName, nameMapper);
         } else {
             throw new IllegalArgumentException("Unknown JRos2Client implementation");
         }

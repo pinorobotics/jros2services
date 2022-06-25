@@ -17,8 +17,8 @@
  */
 package pinorobotics.jros2services;
 
+import id.jros2client.impl.DdsNameMapper;
 import id.jros2messages.MessageSerializationUtils;
-import id.jrosclient.utils.RosNameUtils;
 import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
@@ -30,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import pinorobotics.ddsrpc.SampleIdentity;
-import pinorobotics.jros2services.impl.Ros2ServicesNameMapper;
 import pinorobotics.jros2services.service_msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
@@ -60,9 +59,8 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
     private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
-    private static final Ros2ServicesNameMapper rosNameMapper =
-            new Ros2ServicesNameMapper(new RosNameUtils());
 
+    private DdsNameMapper rosNameMapper;
     private RtpsTalkClient rtpsTalkClient;
     private MessageSerializationUtils serializationUtils = new MessageSerializationUtils();
     private ServiceDefinition<R, A> serviceDefinition;
@@ -78,10 +76,12 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
     JRos2ServiceClient(
             RtpsTalkClient rtpsTalkClient,
             ServiceDefinition<R, A> serviceDefinition,
-            String serviceName) {
+            String serviceName,
+            DdsNameMapper rosNameMapper) {
         this.rtpsTalkClient = rtpsTalkClient;
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
+        this.rosNameMapper = rosNameMapper;
     }
 
     public CompletableFuture<A> sendRequestAsync(R requestMessage) {
@@ -129,7 +129,6 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
     private void startLazy() {
         if (status == 0) {
             start();
-            status++;
         } else if (status != 1) {
             throw new IllegalStateException("Already stopped");
         }
@@ -137,12 +136,12 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
 
     private void start() {
         Preconditions.isTrue(status == 0, "Can be started only once");
+        status++;
         var requestMessageClass = serviceDefinition.getServiceRequestMessage();
-        var requestMessageName =
-                rosNameMapper.asFullyQualifiedServiceMessageName(requestMessageClass);
+        var requestMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(requestMessageClass);
         LOGGER.fine("Starting service client for {0}", serviceName);
         var requestTopicName =
-                rosNameMapper.asFullyQualifiedServiceName(requestMessageClass, serviceName);
+                rosNameMapper.asFullyQualifiedDdsTopicName(requestMessageClass, serviceName);
         requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
         LOGGER.fine(
                 "Registering publisher for {0} with type {1}",
@@ -150,10 +149,9 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
         rtpsTalkClient.publish(requestTopicName, requestMessageName, requestsPublisher);
 
         var responseMessageClass = serviceDefinition.getServiceResponseMessage();
-        var responseMessageName =
-                rosNameMapper.asFullyQualifiedServiceMessageName(responseMessageClass);
+        var responseMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(responseMessageClass);
         var responseTopicName =
-                rosNameMapper.asFullyQualifiedServiceName(responseMessageClass, serviceName);
+                rosNameMapper.asFullyQualifiedDdsTopicName(responseMessageClass, serviceName);
         resultsSubscriber =
                 new SimpleSubscriber<>() {
                     @Override
@@ -172,7 +170,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
                                                 + " Ignoring response {0}...",
                                         seqNum);
                             } else {
-                                LOGGER.warning("Received result for goal id {0}", seqNum);
+                                LOGGER.fine("Received result for goal id {0}", seqNum);
                                 var future = pendingRequests.get(seqNum);
                                 var response =
                                         serializationUtils.read(

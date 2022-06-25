@@ -27,14 +27,6 @@ jar {
     }
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs += ["src/main/gen/java"]
-        }
-    }
-}
-
 javadoc {
     options.noTimestamp = true;
     options.noQualifiers = ["all"];
