@@ -42,7 +42,7 @@ public class JRos2ServiceClientFactory {
      * @param <R> request message type
      * @param <A> response message type
      */
-    public <R extends Message, A extends Message> JRos2ServiceClient<R, A> createJRos2ServiceClient(
+    public <R extends Message, A extends Message> JRos2ServiceClient<R, A> createClient(
             JRos2Client client, ServiceDefinition<R, A> serviceDefinition, String serviceName) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceClient<>(

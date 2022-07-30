@@ -141,7 +141,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
         var requestMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(requestMessageClass);
         LOGGER.fine("Starting service client for {0}", serviceName);
         var requestTopicName =
-                rosNameMapper.asFullyQualifiedDdsTopicName(requestMessageClass, serviceName);
+                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, requestMessageClass);
         requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
         LOGGER.fine(
                 "Registering publisher for {0} with type {1}",
@@ -151,7 +151,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
         var responseMessageClass = serviceDefinition.getServiceResponseMessage();
         var responseMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(responseMessageClass);
         var responseTopicName =
-                rosNameMapper.asFullyQualifiedDdsTopicName(responseMessageClass, serviceName);
+                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, responseMessageClass);
         resultsSubscriber =
                 new SimpleSubscriber<>() {
                     @Override
