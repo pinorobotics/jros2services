@@ -18,8 +18,8 @@
 package pinorobotics.jros2services;
 
 import id.jros2client.JRos2Client;
-import id.jros2client.impl.DdsNameMapper;
 import id.jros2client.impl.JRos2ClientImpl;
+import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jrosclient.utils.RosNameUtils;
 import id.jrosmessages.Message;
 import pinorobotics.jros2services.service_msgs.ServiceDefinition;

@@ -7,6 +7,7 @@
   <license>Apache License 2.0</license>
   <author>Mikael Arguedas</author>
   <author>Morgan Quigley</author>
+  <maintainer email="intid@protonmail.com">lambdaprime</maintainer>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

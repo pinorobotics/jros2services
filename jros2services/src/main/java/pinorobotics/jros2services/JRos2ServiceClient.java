@@ -17,7 +17,8 @@
  */
 package pinorobotics.jros2services;
 
-import id.jros2client.impl.DdsNameMapper;
+import id.jros2client.impl.rmw.DdsNameMapper;
+import id.jros2client.impl.rmw.RmwConstants;
 import id.jros2messages.MessageSerializationUtils;
 import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
@@ -146,7 +147,11 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
         LOGGER.fine(
                 "Registering publisher for {0} with type {1}",
                 requestTopicName, requestMessageName);
-        rtpsTalkClient.publish(requestTopicName, requestMessageName, requestsPublisher);
+        rtpsTalkClient.publish(
+                requestTopicName,
+                requestMessageName,
+                RmwConstants.DEFAULT_PUBLISHER_QOS,
+                requestsPublisher);
 
         var responseMessageClass = serviceDefinition.getServiceResponseMessage();
         var responseMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(responseMessageClass);
@@ -157,31 +162,47 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
-                        var params = message.inlineQos().getParameters();
-                        if (!params.containsKey(PID_FASTDDS_SAMPLE_IDENTITY)) {
-                            LOGGER.warning("Received message without identity, ignoring it");
-                        } else {
-                            var identityBody = params.get(PID_FASTDDS_SAMPLE_IDENTITY);
-                            var identity = SampleIdentity.valueOf(identityBody);
-                            var seqNum = identity.seqNum();
-                            if (!pendingRequests.containsKey(seqNum)) {
+                        try {
+                            var userInlineQos = message.userInlineQos().orElse(null);
+                            if (userInlineQos == null) {
                                 LOGGER.warning(
-                                        "Cannot match received response with any known requests."
-                                                + " Ignoring response {0}...",
-                                        seqNum);
-                            } else {
-                                LOGGER.fine("Received result for goal id {0}", seqNum);
-                                var future = pendingRequests.get(seqNum);
-                                var response =
-                                        serializationUtils.read(
-                                                message.data(),
-                                                serviceDefinition.getServiceResponseMessage());
-                                future.complete(response);
+                                        "Received RTPS message without inlineQos, ignoring it");
+                                return;
                             }
+                            var params = userInlineQos.getParameters();
+                            if (!params.containsKey(PID_FASTDDS_SAMPLE_IDENTITY)) {
+                                LOGGER.warning("Received message without identity, ignoring it");
+                            } else {
+                                var identityBody = params.get(PID_FASTDDS_SAMPLE_IDENTITY);
+                                var identity = SampleIdentity.valueOf(identityBody);
+                                var seqNum = identity.seqNum();
+                                if (!pendingRequests.containsKey(seqNum)) {
+                                    LOGGER.warning(
+                                            "Cannot match received response with any known"
+                                                    + " requests. Ignoring response {0}...",
+                                            seqNum);
+                                } else {
+                                    LOGGER.fine("Received result for goal id {0}", seqNum);
+                                    var future = pendingRequests.get(seqNum);
+                                    var data = message.data().orElse(null);
+                                    if (data == null) {
+                                        LOGGER.warning(
+                                                "RTPS message has no data in it, ignoring it");
+                                    } else {
+                                        var response =
+                                                serializationUtils.read(
+                                                        data,
+                                                        serviceDefinition
+                                                                .getServiceResponseMessage());
+                                        future.complete(response);
+                                    }
+                                }
+                            }
+                        } finally {
+                            // request next message
+                            getSubscription().get().request(1);
+                            LOGGER.exiting("onNext " + serviceName);
                         }
-                        // request next message
-                        getSubscription().get().request(1);
-                        LOGGER.exiting("onNext " + serviceName);
                     }
 
                     @Override
@@ -194,6 +215,10 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
                 "Registering subscriber for {0} with type {1}",
                 responseTopicName, responseMessageName);
         entityId =
-                rtpsTalkClient.subscribe(responseTopicName, responseMessageName, resultsSubscriber);
+                rtpsTalkClient.subscribe(
+                        responseTopicName,
+                        responseMessageName,
+                        RmwConstants.DEFAULT_SUBSCRIBER_QOS,
+                        resultsSubscriber);
     }
 }
