@@ -47,7 +47,7 @@ import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
  * ROS2 Foxy.
  *
  * <p>In future it is possible that all RML implementations will switch to DDS-RPC standard (see <a
- * href="https://design.ros2.org/articles/ros_on_dds.html">Services and Actions</a>
+ * href="https://design.ros2.org/articles/ros_on_dds.html">Services and Actions</a>).
  *
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
