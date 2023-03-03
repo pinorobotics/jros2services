@@ -17,7 +17,7 @@
  */
 package pinorobotics.jros2services.tests.integration.example_interfaces_msgs;
 
-import pinorobotics.jros2services.service_msgs.ServiceDefinition;
+import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
 /**
  * @author lambdaprime intid@protonmail.com

@@ -22,7 +22,7 @@ import id.jros2client.impl.JRos2ClientImpl;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jrosclient.utils.RosNameUtils;
 import id.jrosmessages.Message;
-import pinorobotics.jros2services.service_msgs.ServiceDefinition;
+import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
 /**
  * Factory methods to create {@link JRos2ServiceClient}

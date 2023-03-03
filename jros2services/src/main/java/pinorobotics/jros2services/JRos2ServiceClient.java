@@ -24,6 +24,7 @@ import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
+import id.xfunction.util.LazyService;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import pinorobotics.ddsrpc.SampleIdentity;
-import pinorobotics.jros2services.service_msgs.ServiceDefinition;
+import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
@@ -56,7 +57,7 @@ import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
  * @param <A> response message type
  * @author lambdaprime intid@protonmail.com
  */
-public class JRos2ServiceClient<R extends Message, A extends Message> implements AutoCloseable {
+public class JRos2ServiceClient<R extends Message, A extends Message> extends LazyService {
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
     private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
@@ -111,7 +112,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
     }
 
     @Override
-    public void close() {
+    protected void onClose() {
         LOGGER.entering("close " + serviceName);
         if (status == 1) {
             requestsPublisher.close();
@@ -127,15 +128,8 @@ public class JRos2ServiceClient<R extends Message, A extends Message> implements
         LOGGER.exiting("close " + serviceName);
     }
 
-    private void startLazy() {
-        if (status == 0) {
-            start();
-        } else if (status != 1) {
-            throw new IllegalStateException("Already stopped");
-        }
-    }
-
-    private void start() {
+    @Override
+    protected void onStart() {
         Preconditions.isTrue(status == 0, "Can be started only once");
         status++;
         var requestMessageClass = serviceDefinition.getServiceRequestMessage();

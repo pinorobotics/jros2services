@@ -30,6 +30,7 @@
  * @author lambdaprime intid@protonmail.com
  */
 module jros2services {
+    requires transitive jrosservices;
     requires transitive jros2messages;
     requires transitive jros2client;
     requires jrosclient;
@@ -38,5 +39,4 @@ module jros2services {
     requires jrosmessages;
 
     exports pinorobotics.jros2services;
-    exports pinorobotics.jros2services.service_msgs;
 }
