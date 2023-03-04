@@ -22,13 +22,13 @@ eclipse.classpath.file {
 }
 
 dependencies {
-  addDependencies(this, ["implementation", "apiElements"], "1.0-SNAPSHOT", [
+  addDependencies(this, ["implementation", "apiElements"], "1.0", [
     "io.github.pinorobotics:jrosservices"
   ]);
-  addDependencies(this, ["implementation", "apiElements"], "2.0-SNAPSHOT", [
+  addDependencies(this, ["implementation", "apiElements"], "2.0", [
     "io.github.lambdaprime:jros2messages"
   ]);
-  addDependencies(this, ["implementation", "apiElements"], "2.0-SNAPSHOT", [
+  addDependencies(this, ["implementation", "apiElements"], "2.0", [
     "io.github.lambdaprime:jros2client"
   ]);
 }
@@ -72,7 +72,7 @@ task createPackage(type: Copy, dependsOn: [copyLibs]) {
 
 task cleanRelease(type: Delete) {
   delete "$packageDir"
-  delete "$projectDir/release"
+  delete "$projectDir/release/*-SNAPSHOT.zip"
 }
 
 createRelease.dependsOn createPackage, javadoc
