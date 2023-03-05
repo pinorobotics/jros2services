@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
-import pinorobotics.ddsrpc.SampleIdentity;
+import pinorobotics.jros2services.ddsrpc.SampleIdentity;
 import pinorobotics.jrosservices.JRosServiceClient;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
