@@ -86,8 +86,8 @@ clean.dependsOn cleanRelease
 classes.dependsOn spotlessApply
 
 task updateVersion() {
-  // update version only when non SNAPSHOT version is built
-  if (version.contains("SNAPSHOT")) return;
+  // update version only when it is specified and non SNAPSHOT version is built
+  if (version || version.contains("SNAPSHOT")) return;
   println "Updating version to " + version
   new id.xfunction.text.Substitutor()
     .withRegexpSupport()
@@ -104,7 +104,7 @@ if (project.hasProperty('publish')) {
   // it was rewritten for new one
 
   task javadocJar(type: Jar) {
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from "README-javadoc.txt"
   }
 

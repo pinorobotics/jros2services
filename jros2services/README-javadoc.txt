@@ -1,1 +1,1 @@
-Javadoc is available here http://pinoweb.freetzi.com/jros2services
+Javadoc is available here http://pinoweb.freetzi.com/jrosservices
