@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import pinorobotics.ddsrpc.SampleIdentity;
+import pinorobotics.jrosservices.JRosServiceClient;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
@@ -57,7 +58,8 @@ import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
  * @param <A> response message type
  * @author lambdaprime intid@protonmail.com
  */
-public class JRos2ServiceClient<R extends Message, A extends Message> extends LazyService {
+public class JRos2ServiceClient<R extends Message, A extends Message> extends LazyService
+        implements JRosServiceClient<R, A> {
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
     private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
@@ -86,6 +88,8 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
         this.rosNameMapper = rosNameMapper;
     }
 
+    /** {@inheritDoc} */
+    @Override
     public CompletableFuture<A> sendRequestAsync(R requestMessage) {
         LOGGER.entering("sendRequest " + serviceName);
         startLazy();
@@ -111,6 +115,9 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
         return future;
     }
 
+    /**
+     * @hidden exclude from javadoc
+     */
     @Override
     protected void onClose() {
         LOGGER.entering("close " + serviceName);
@@ -128,6 +135,9 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
         LOGGER.exiting("close " + serviceName);
     }
 
+    /**
+     * @hidden exclude from javadoc
+     */
     @Override
     protected void onStart() {
         Preconditions.isTrue(status == 0, "Can be started only once");

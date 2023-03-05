@@ -20,7 +20,7 @@
  * href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  * (Robot Operating System) Services</a>.
  *
- * <p>For usage examples see <a href="http://pinoweb.freetzi.com/jros2services">Documentation</a>
+ * <p>For usage examples see <a href="http://pinoweb.freetzi.com/jrosservices">Documentation</a>
  *
  * @see <a href="https://github.com/pinorobotics/jros2services">GitHub repository</a>
  * @see <a href="https://github.com/pinorobotics/jros2services/releases">Download</a>
