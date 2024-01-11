@@ -4,12 +4,13 @@ buildscript {
     mavenCentral()
   }
   dependencies {
-    classpath "io.github.lambdaprime:id.xfunction:14.0"
+    classpath "io.github.lambdaprime:id.xfunction:23.0"
   }
 }
 
 plugins {
   id 'com.diffplug.spotless'
+  // only if you build Java library
   id 'java-library'
 }
 
@@ -28,7 +29,11 @@ dependencies {
   api "io.github.lambdaprime:jros2client:2.0"
 }
 
-jar { 
+configurations {
+  customConfig.extendsFrom implementation
+}
+
+jar {
   manifest { 
     attributes 'Implementation-Version': "${rootProject.version}"
   }
@@ -87,7 +92,8 @@ classes.dependsOn spotlessApply
 
 task updateVersion() {
   // update version only when it is specified and non SNAPSHOT version is built
-  if (version || version.contains("SNAPSHOT")) return;
+  // 'unspecified' is the default value for the version in Gradle if it is not set
+  if (!version || version == "unspecified" || version.contains("SNAPSHOT")) return;
   println "Updating version to " + version
   new id.xfunction.text.Substitutor()
     .withRegexpSupport()

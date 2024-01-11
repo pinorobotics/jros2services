@@ -6,7 +6,7 @@ Java 17+
 
 # Download
 
-[Release versions](https://github.com/pinorobotics/jros2services/releases)
+[Release versions](jros2services/release/CHANGELOG.md)
 
 Or you can add dependency to it as follows:
 
@@ -24,7 +24,7 @@ dependencies {
 
 [Development](DEVELOPMENT.md)
 
-# Contributors
+# Contacts
 
 lambdaprime <intid@protonmail.com>
 
