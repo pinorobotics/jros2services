@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import id.jros2client.JRos2Client;
 import id.jros2client.JRos2ClientFactory;
+import id.opentelemetry.exporters.extensions.ElasticsearchMetricsExtension;
 import id.xfunction.lang.XExec;
 import id.xfunction.lang.XProcess;
 import id.xfunction.logging.XLogger;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import pinorobotics.jros2services.JRos2ServiceClient;
 import pinorobotics.jros2services.JRos2ServiceClientFactory;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsRequestMessage;
@@ -39,6 +41,7 @@ import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddT
 /**
  * @author lambdaprime intid@protonmail.com
  */
+@ExtendWith({ElasticsearchMetricsExtension.class})
 public class JRos2ServiceClientIntegrationTests {
 
     private JRos2Client client;
@@ -55,7 +58,7 @@ public class JRos2ServiceClientIntegrationTests {
         service =
                 new XExec("ws2/build/examples_rclcpp_minimal_service/service_main")
                         .start()
-                        .forwardOutputAsync();
+                        .forwardOutputAsync(true);
         client = new JRos2ClientFactory().createClient();
         serviceClient =
                 new JRos2ServiceClientFactory()

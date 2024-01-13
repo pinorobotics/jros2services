@@ -24,9 +24,8 @@ eclipse.classpath.file {
 }
 
 dependencies {
-  api "io.github.pinorobotics:jrosservices:1.0"
-  api "io.github.lambdaprime:jros2messages:2.0"
-  api "io.github.lambdaprime:jros2client:2.0"
+  api "io.github.pinorobotics:jrosservices:2.0-SNAPSHOT"
+  api "io.github.lambdaprime:jros2client:4.0"
 }
 
 configurations {

@@ -17,6 +17,7 @@
  */
 package pinorobotics.jros2services;
 
+import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jros2client.impl.rmw.RmwConstants;
 import id.jros2messages.MessageSerializationUtils;
@@ -25,7 +26,12 @@ import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.LazyService;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.metrics.LongHistogram;
+import io.opentelemetry.api.metrics.Meter;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +39,7 @@ import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import pinorobotics.jros2services.ddsrpc.SampleIdentity;
 import pinorobotics.jrosservices.JRosServiceClient;
+import pinorobotics.jrosservices.JRosServiceClientMetrics;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
@@ -64,12 +71,36 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
     private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
 
+    private final Meter METER =
+            GlobalOpenTelemetry.getMeter(JRos2ServiceClient.class.getSimpleName());
+    private final LongHistogram REQUESTS_METER =
+            METER.histogramBuilder(JRosServiceClientMetrics.REQUESTS_METRIC)
+                    .setDescription(JRosServiceClientMetrics.REQUESTS_METRIC_DESCRIPTION)
+                    .ofLongs()
+                    .build();
+    private final LongHistogram RESPONSES_METER =
+            METER.histogramBuilder(JRosServiceClientMetrics.RESPONSES_METRIC)
+                    .setDescription(JRosServiceClientMetrics.RESPONSES_METRIC_DESCRIPTION)
+                    .ofLongs()
+                    .build();
+    private final LongHistogram GOAL_EXECUTION_TIME_METER =
+            METER.histogramBuilder(JRosServiceClientMetrics.GOAL_EXECUTION_TIME_METRIC)
+                    .setDescription(JRosServiceClientMetrics.GOAL_EXECUTION_TIME_METRIC_DESCRIPTION)
+                    .ofLongs()
+                    .build();
+
+    private record PendingRequest<T>(CompletableFuture<T> future, Instant requestedAt) {
+        public PendingRequest(CompletableFuture<T> result) {
+            this(result, Instant.now());
+        }
+    }
+
     private DdsNameMapper rosNameMapper;
     private RtpsTalkClient rtpsTalkClient;
     private MessageSerializationUtils serializationUtils = new MessageSerializationUtils();
     private ServiceDefinition<R, A> serviceDefinition;
     private int status; // 0 - not started, 1 - started, 2 - stopped
-    private Map<Long, CompletableFuture<A>> pendingRequests = new HashMap<>();
+    private Map<Long, PendingRequest<A>> pendingRequests = new HashMap<>();
     private SubmissionPublisher<RtpsTalkDataMessage> requestsPublisher;
     private SimpleSubscriber<RtpsTalkDataMessage> resultsSubscriber;
     private String serviceName;
@@ -105,11 +136,12 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                                 new SampleIdentity(writerGuid.array(), requestId).toByteArray()));
         var data = serializationUtils.write(requestMessage);
         LOGGER.fine("Submitting request for {0}", serviceName);
+        REQUESTS_METER.record(1, JRos2ClientConstants.JROS2CLIENT_ATTRS);
         requestsPublisher.submit(new RtpsTalkDataMessage(params, data));
 
         // register a new subscriber
         var future = new CompletableFuture<A>();
-        pendingRequests.put(requestId, future);
+        pendingRequests.put(requestId, new PendingRequest<A>(future));
 
         LOGGER.exiting("sendRequest " + serviceName);
         return future;
@@ -128,8 +160,8 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
             pendingRequests
                     .values()
                     .forEach(
-                            future ->
-                                    future.completeExceptionally(
+                            result ->
+                                    result.future.completeExceptionally(
                                             new RuntimeException("JRos2ServiceClient has closed")));
         }
         LOGGER.exiting("close " + serviceName);
@@ -166,6 +198,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
+                        RESPONSES_METER.record(1, JRos2ClientConstants.JROS2CLIENT_ATTRS);
                         try {
                             var userInlineQos = message.userInlineQos().orElse(null);
                             if (userInlineQos == null) {
@@ -187,7 +220,11 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                                             seqNum);
                                 } else {
                                     LOGGER.fine("Received result for goal id {0}", seqNum);
-                                    var future = pendingRequests.get(seqNum);
+                                    var result = pendingRequests.get(seqNum);
+                                    GOAL_EXECUTION_TIME_METER.record(
+                                            Duration.between(result.requestedAt, Instant.now())
+                                                    .toMillis(),
+                                            JRos2ClientConstants.JROS2CLIENT_ATTRS);
                                     var data = message.data().orElse(null);
                                     if (data == null) {
                                         LOGGER.warning(
@@ -198,7 +235,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                                                         data,
                                                         serviceDefinition
                                                                 .getServiceResponseMessage());
-                                        future.complete(response);
+                                        result.future.complete(response);
                                     }
                                 }
                             }
@@ -212,7 +249,9 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                     @Override
                     public void onError(Throwable throwable) {
                         super.onError(throwable);
-                        pendingRequests.values().forEach(fu -> fu.completeExceptionally(throwable));
+                        pendingRequests
+                                .values()
+                                .forEach(res -> res.future.completeExceptionally(throwable));
                     }
                 };
         LOGGER.fine(

@@ -37,6 +37,7 @@ module jros2services {
     requires rtpstalk;
     requires id.xfunction;
     requires jrosmessages;
+    requires io.opentelemetry.api;
 
     exports pinorobotics.jros2services;
 }

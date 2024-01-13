@@ -25,6 +25,7 @@ open module jros2services.tests {
     requires jrosclient;
     requires jros2client;
     requires org.junit.jupiter.api;
+    requires id.opentelemetry.exporters.pack.junit;
 
     exports pinorobotics.jros2services.tests.integration;
 }
