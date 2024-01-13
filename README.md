@@ -20,7 +20,7 @@ dependencies {
 
 # Documentation
 
-[Documentation](http://pinoweb.freetzi.com/jros2services)
+[Documentation](http://pinoweb.freetzi.com/jrosservices)
 
 [Development](DEVELOPMENT.md)
 
