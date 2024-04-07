@@ -23,7 +23,8 @@
  * <p>For usage examples see <a href="http://pinoweb.freetzi.com/jrosservices">Documentation</a>
  *
  * @see <a href="https://github.com/pinorobotics/jros2services">GitHub repository</a>
- * @see <a href="https://github.com/pinorobotics/jros2services/releases">Download</a>
+ * @see <a
+ *     href="https://github.com/pinorobotics/jros2services/blob/main/jros2services/release/CHANGELOG.md">Releases</a>
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  *     Services</a>

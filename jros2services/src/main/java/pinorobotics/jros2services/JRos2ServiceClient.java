@@ -136,7 +136,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                                 new SampleIdentity(writerGuid.array(), requestId).toByteArray()));
         var data = serializationUtils.write(requestMessage);
         LOGGER.fine("Submitting request for {0}", serviceName);
-        REQUESTS_METER.record(1, JRos2ClientConstants.JROS2CLIENT_ATTRS);
+        REQUESTS_METER.record(1, JRos2ClientConstants.METRIC_ATTRS);
         requestsPublisher.submit(new RtpsTalkDataMessage(params, data));
 
         // register a new subscriber
@@ -198,7 +198,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
-                        RESPONSES_METER.record(1, JRos2ClientConstants.JROS2CLIENT_ATTRS);
+                        RESPONSES_METER.record(1, JRos2ClientConstants.METRIC_ATTRS);
                         try {
                             var userInlineQos = message.userInlineQos().orElse(null);
                             if (userInlineQos == null) {
@@ -224,7 +224,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                                     GOAL_EXECUTION_TIME_METER.record(
                                             Duration.between(result.requestedAt, Instant.now())
                                                     .toMillis(),
-                                            JRos2ClientConstants.JROS2CLIENT_ATTRS);
+                                            JRos2ClientConstants.METRIC_ATTRS);
                                     var data = message.data().orElse(null);
                                     if (data == null) {
                                         LOGGER.warning(

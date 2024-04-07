@@ -28,7 +28,10 @@ import java.util.Objects;
  *
  * @author lambdaprime intid@protonmail.com
  */
-@MessageMetadata(name = AddTwoIntsRequestMessage.NAME, interfaceType = RosInterfaceType.SERVICE)
+@MessageMetadata(
+        name = AddTwoIntsRequestMessage.NAME,
+        fields = {"a", "b"},
+        interfaceType = RosInterfaceType.SERVICE)
 public class AddTwoIntsRequestMessage implements Message {
 
     static final String NAME = "example_interfaces/AddTwoIntsServiceRequest";
