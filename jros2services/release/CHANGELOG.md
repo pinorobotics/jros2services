@@ -1,3 +1,10 @@
+# Version 4
+
+- Updating to jros2client v6
+- Fix link to documentation
+
+[jros2services-v4.0.zip](https://github.com/pinorobotics/jros2services/raw/main/jros2services/release/jros2services-v4.0.zip)
+
 # Version 3
 
 - Android build support
