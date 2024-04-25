@@ -10,9 +10,9 @@ eclipse.classpath.file {
 }
 
 dependencies {
-  testImplementation project(':jros2services')
-  testImplementation "io.github.lambdaprime:id.opentelemetry-exporters-pack-junit:3.0"
-  
+  testImplementation project(":${zzName}")
+  zzTestDependencies.split(',').findAll{ !it.isBlank() }.each { testImplementation it }
+
   def junitVersion = "5.8.1"
   testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
   testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
@@ -31,6 +31,7 @@ sourceSets {
 test {
   systemProperty "metrics.elastic.url", System.env.ELASTIC_URL + "/jros2client"
   useJUnitPlatform()
+
   testLogging {
     events "started", "failed"
   }

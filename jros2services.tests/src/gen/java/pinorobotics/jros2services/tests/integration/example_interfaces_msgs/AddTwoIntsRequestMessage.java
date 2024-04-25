@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 jros2services project
+ * Copyright 2021 jrosservices project
  * 
  * Website: https://github.com/pinorobotics/jros2services
  * 
