@@ -20,7 +20,7 @@ package pinorobotics.jros2services;
 import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jros2client.impl.rmw.RmwConstants;
-import id.jros2messages.MessageSerializationUtils;
+import id.jros2messages.Ros2MessageSerializationUtils;
 import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
@@ -97,7 +97,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
 
     private DdsNameMapper rosNameMapper;
     private RtpsTalkClient rtpsTalkClient;
-    private MessageSerializationUtils serializationUtils = new MessageSerializationUtils();
+    private Ros2MessageSerializationUtils serializationUtils = new Ros2MessageSerializationUtils();
     private ServiceDefinition<R, A> serviceDefinition;
     private int status; // 0 - not started, 1 - started, 2 - stopped
     private Map<Long, PendingRequest<A>> pendingRequests = new HashMap<>();
