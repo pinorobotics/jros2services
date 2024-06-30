@@ -56,7 +56,9 @@ public class JRos2ServiceClientIntegrationTests {
     @BeforeEach
     public void setup() throws MalformedURLException {
         service =
-                new XExec("ws2/build/examples_rclcpp_minimal_service/service_main")
+                new XExec(
+                                "ws2/build.%s/examples_rclcpp_minimal_service/service_main"
+                                        .formatted(System.getenv("ROS_DISTRO")))
                         .start()
                         .forwardOutputAsync(true);
         client = new JRos2ClientFactory().createClient();

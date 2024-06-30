@@ -19,7 +19,9 @@ package pinorobotics.jros2services;
 
 import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
+import id.jros2client.impl.rmw.DdsQosMapper;
 import id.jros2client.impl.rmw.RmwConstants;
+import id.jros2client.qos.SubscriberQos;
 import id.jros2messages.Ros2MessageSerializationUtils;
 import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
@@ -44,6 +46,7 @@ import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
+import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
 
 /**
  * Client which allows to interact with ROS2 Services.
@@ -70,6 +73,8 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
     private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
+    private static final SubscriberQosPolicy DEFAULT_SUBSCRIBER_QOS =
+            new DdsQosMapper().asDds(SubscriberQos.DEFAULT_SUBSCRIBER_QOS);
 
     private final Meter METER =
             GlobalOpenTelemetry.getMeter(JRos2ServiceClient.class.getSimpleName());
@@ -261,7 +266,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
                 rtpsTalkClient.subscribe(
                         responseTopicName,
                         responseMessageName,
-                        RmwConstants.DEFAULT_SUBSCRIBER_QOS,
+                        DEFAULT_SUBSCRIBER_QOS,
                         resultsSubscriber);
     }
 }
