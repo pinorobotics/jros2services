@@ -1,3 +1,9 @@
+# Version 6
+
+- Updating to jros2client v9 to support Jazzy
+
+[jros2services-v6.0.zip](https://github.com/pinorobotics/jros2services/raw/main/jros2services/release/jros2services-v6.0.zip)
+
 # Version 5
 
 - Updating jros2client to v6

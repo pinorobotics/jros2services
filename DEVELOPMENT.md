@@ -22,7 +22,7 @@ gradle eclipse
 
 - Update [Android dependencies](android/gradle.properties) and run `gradle clean build -b android/build.gradle`
 - Close version in gradle.properties
-- Run `gradle clean build javadoc`
+- Run `gradle clean build javadoc` (on Humble then Jazzy)
 - Publish
 - Open next SNAPSHOT version
 - Update [CHANGELOG.md](jros2services/release/CHANGELOG.md) with new release (for changelog generation use `git log --format=%s`)
