@@ -15,9 +15,11 @@
 #include <inttypes.h>
 #include <memory>
 #include "example_interfaces/srv/add_two_ints.hpp"
+#include "std_srvs/srv/trigger.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 using AddTwoInts = example_interfaces::srv::AddTwoInts;
+using Trigger = std_srvs::srv::Trigger;
 rclcpp::Node::SharedPtr g_node = nullptr;
 
 void handle_service(
@@ -32,11 +34,25 @@ void handle_service(
   response->sum = request->a + request->b;
 }
 
+void handle_trigger(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<Trigger::Request> request,
+  const std::shared_ptr<Trigger::Response> response)
+{
+  (void)request_header;
+  RCLCPP_INFO(g_node->get_logger(), "request: trigger");
+  response->success = true;
+  response->message = "ok";
+}
+
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  g_node = rclcpp::Node::make_shared("minimal_service");
-  auto server = g_node->create_service<AddTwoInts>("add_two_ints", handle_service);
+  g_node = rclcpp::Node::make_shared("minimal_service111111");
+  RCLCPP_INFO(g_node->get_logger(), "request: trigger");
+  // assign service object to variable otherwise it will be instantly destroyed
+  auto service1 = g_node->create_service<AddTwoInts>("add_two_ints", handle_service);
+  auto service2 = g_node->create_service<Trigger>("trigger", handle_trigger);
   rclcpp::spin(g_node);
   rclcpp::shutdown();
   g_node = nullptr;

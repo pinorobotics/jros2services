@@ -32,11 +32,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import pinorobotics.jros2services.JRos2ServiceClient;
 import pinorobotics.jros2services.JRos2ServiceClientFactory;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsRequestMessage;
-import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsResponseMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsServiceDefinition;
+import pinorobotics.jrosservices.std_srvs.TriggerRequestMessage;
+import pinorobotics.jrosservices.std_srvs.TriggerServiceDefinition;
 
 /**
  * @author lambdaprime intid@protonmail.com
@@ -45,7 +45,6 @@ import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddT
 public class JRos2ServiceClientIntegrationTests {
 
     private JRos2Client client;
-    private JRos2ServiceClient<AddTwoIntsRequestMessage, AddTwoIntsResponseMessage> serviceClient;
     private XProcess service;
 
     @BeforeAll
@@ -62,30 +61,44 @@ public class JRos2ServiceClientIntegrationTests {
                         .start()
                         .forwardOutputAsync(true);
         client = new JRos2ClientFactory().createClient();
-        serviceClient =
-                new JRos2ServiceClientFactory()
-                        .createClient(client, new AddTwoIntsServiceDefinition(), "add_two_ints");
     }
 
     @AfterEach
     public void clean() throws Exception {
-        serviceClient.close();
         client.close();
         service.destroyAllForcibly();
     }
 
     @Test
     public void test_sendRequest() throws Exception {
-        var seed = 63;
-        var pendingResults =
-                IntStream.range(0, 5)
-                        .mapToObj(i -> new AddTwoIntsRequestMessage(seed, i))
-                        .map(req -> serviceClient.sendRequestAsync(req))
-                        .toList();
-        for (int i = 0; i < pendingResults.size(); i++) {
-            var result = pendingResults.get(i).get();
-            System.out.println(result);
-            assertEquals(seed + i, result.sum);
+        try (var serviceClient =
+                new JRos2ServiceClientFactory()
+                        .createClient(client, new AddTwoIntsServiceDefinition(), "add_two_ints")) {
+            var seed = 63;
+            var pendingResults =
+                    IntStream.range(0, 5)
+                            .mapToObj(i -> new AddTwoIntsRequestMessage(seed, i))
+                            .map(req -> serviceClient.sendRequestAsync(req))
+                            .toList();
+            for (int i = 0; i < pendingResults.size(); i++) {
+                var result = pendingResults.get(i).get();
+                System.out.println(result);
+                assertEquals(seed + i, result.sum);
+            }
+        }
+    }
+
+    @Test
+    public void test_trigger() throws Exception {
+        try (var serviceClient =
+                new JRos2ServiceClientFactory()
+                        .createClient(client, new TriggerServiceDefinition(), "trigger")) {
+            assertEquals(
+                    """
+                    { "success": "true", "message": { "data": "ok" } }
+                    """
+                            .strip(),
+                    serviceClient.sendRequestAsync(new TriggerRequestMessage()).get().toString());
         }
     }
 }

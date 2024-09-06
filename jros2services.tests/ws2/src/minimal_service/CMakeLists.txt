@@ -12,10 +12,11 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(example_interfaces REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(rclcpp REQUIRED)
 
 add_executable(service_main main.cpp)
-ament_target_dependencies(service_main rclcpp example_interfaces)
+ament_target_dependencies(service_main rclcpp example_interfaces std_srvs)
 
 install(TARGETS service_main
   DESTINATION lib/${PROJECT_NAME})

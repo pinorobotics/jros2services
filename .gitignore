@@ -12,3 +12,5 @@
 **/log
 **/install
 .catkin_workspace
+**/build.*
+**/install.*
