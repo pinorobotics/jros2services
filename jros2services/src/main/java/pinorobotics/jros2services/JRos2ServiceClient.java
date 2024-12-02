@@ -27,7 +27,7 @@ import id.jrosmessages.Message;
 import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
-import id.xfunction.util.LazyService;
+import id.xfunction.util.IdempotentService;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
@@ -68,7 +68,7 @@ import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
  * @param <A> response message type
  * @author lambdaprime intid@protonmail.com
  */
-public class JRos2ServiceClient<R extends Message, A extends Message> extends LazyService
+public class JRos2ServiceClient<R extends Message, A extends Message> extends IdempotentService
         implements JRosServiceClient<R, A> {
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
@@ -128,7 +128,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends La
     @Override
     public CompletableFuture<A> sendRequestAsync(R requestMessage) {
         LOGGER.entering("sendRequest " + serviceName);
-        startLazy();
+        start();
         var requestId = requestCounter++;
 
         var writerGuid = ByteBuffer.allocate(16);

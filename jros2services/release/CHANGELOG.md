@@ -1,3 +1,9 @@
+# Version 7
+
+- Issue pinorobotics/jros2services#1 Fixing processing of empty messages, adding tests
+
+[jros2services-v7.0.zip](https://github.com/pinorobotics/jros2services/raw/main/jros2services/release/jros2services-v7.0.zip)
+
 # Version 6
 
 - Updating to jros2client v9 to support Jazzy
