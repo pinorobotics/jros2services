@@ -29,6 +29,7 @@ import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.IdempotentService;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import java.nio.ByteBuffer;
@@ -41,7 +42,7 @@ import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import pinorobotics.jros2services.ddsrpc.SampleIdentity;
 import pinorobotics.jrosservices.JRosServiceClient;
-import pinorobotics.jrosservices.JRosServiceClientMetrics;
+import pinorobotics.jrosservices.metrics.JRosServiceClientMetrics;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
@@ -76,21 +77,21 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     private static final SubscriberQosPolicy DEFAULT_SUBSCRIBER_QOS =
             new DdsQosMapper().asDds(SubscriberQos.DEFAULT_SUBSCRIBER_QOS);
 
-    private final Meter METER =
+    private static final Meter METER =
             GlobalOpenTelemetry.getMeter(JRos2ServiceClient.class.getSimpleName());
-    private final LongHistogram REQUESTS_METER =
-            METER.histogramBuilder(JRosServiceClientMetrics.REQUESTS_METRIC)
-                    .setDescription(JRosServiceClientMetrics.REQUESTS_METRIC_DESCRIPTION)
-                    .ofLongs()
+    private static final LongCounter REQUESTS_METER =
+            METER.counterBuilder(JRosServiceClientMetrics.REQUESTS_SENT_COUNT_METRIC)
+                    .setDescription(JRosServiceClientMetrics.REQUESTS_SENT_COUNT_METRIC_DESCRIPTION)
                     .build();
-    private final LongHistogram RESPONSES_METER =
-            METER.histogramBuilder(JRosServiceClientMetrics.RESPONSES_METRIC)
-                    .setDescription(JRosServiceClientMetrics.RESPONSES_METRIC_DESCRIPTION)
-                    .ofLongs()
+    private static final LongCounter RESPONSES_METER =
+            METER.counterBuilder(JRosServiceClientMetrics.RESPONSES_RECEIVED_COUNT_METRIC)
+                    .setDescription(
+                            JRosServiceClientMetrics.RESPONSES_RECEIVED_COUNT_METRIC_DESCRIPTION)
                     .build();
-    private final LongHistogram GOAL_EXECUTION_TIME_METER =
-            METER.histogramBuilder(JRosServiceClientMetrics.GOAL_EXECUTION_TIME_METRIC)
-                    .setDescription(JRosServiceClientMetrics.GOAL_EXECUTION_TIME_METRIC_DESCRIPTION)
+    private static final LongHistogram GOAL_EXECUTION_TIME_METER =
+            METER.histogramBuilder(JRosServiceClientMetrics.CLIENT_GOAL_EXECUTION_TIME_METRIC)
+                    .setDescription(
+                            JRosServiceClientMetrics.CLIENT_GOAL_EXECUTION_TIME_METRIC_DESCRIPTION)
                     .ofLongs()
                     .build();
 
@@ -141,7 +142,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                                 new SampleIdentity(writerGuid.array(), requestId).toByteArray()));
         var data = serializationUtils.write(requestMessage);
         LOGGER.fine("Submitting request for {0}", serviceName);
-        REQUESTS_METER.record(1, JRos2ClientConstants.METRIC_ATTRS);
+        REQUESTS_METER.add(1, JRos2ClientConstants.METRIC_ATTRS);
         requestsPublisher.submit(new RtpsTalkDataMessage(params, data));
 
         // register a new subscriber
@@ -203,7 +204,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
-                        RESPONSES_METER.record(1, JRos2ClientConstants.METRIC_ATTRS);
+                        RESPONSES_METER.add(1, JRos2ClientConstants.METRIC_ATTRS);
                         try {
                             var userInlineQos = message.userInlineQos().orElse(null);
                             if (userInlineQos == null) {
