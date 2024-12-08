@@ -29,6 +29,7 @@ import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.IdempotentService;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
@@ -112,6 +113,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     private String serviceName;
     private long requestCounter = 1;
     private int entityId;
+    private Attributes metricAttributes;
 
     /** Creates a new instance of the client */
     JRos2ServiceClient(
@@ -123,6 +125,11 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
         this.rosNameMapper = rosNameMapper;
+        metricAttributes =
+                Attributes.builder()
+                        .putAll(JRos2ClientConstants.METRIC_ATTRS)
+                        .put("service", serviceName)
+                        .build();
     }
 
     /** {@inheritDoc} */
@@ -142,7 +149,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                                 new SampleIdentity(writerGuid.array(), requestId).toByteArray()));
         var data = serializationUtils.write(requestMessage);
         LOGGER.fine("Submitting request for {0}", serviceName);
-        REQUESTS_METER.add(1, JRos2ClientConstants.METRIC_ATTRS);
+        REQUESTS_METER.add(1, metricAttributes);
         requestsPublisher.submit(new RtpsTalkDataMessage(params, data));
 
         // register a new subscriber
@@ -204,7 +211,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
-                        RESPONSES_METER.add(1, JRos2ClientConstants.METRIC_ATTRS);
+                        RESPONSES_METER.add(1, metricAttributes);
                         try {
                             var userInlineQos = message.userInlineQos().orElse(null);
                             if (userInlineQos == null) {
@@ -230,7 +237,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                                     GOAL_EXECUTION_TIME_METER.record(
                                             Duration.between(result.requestedAt, Instant.now())
                                                     .toMillis(),
-                                            JRos2ClientConstants.METRIC_ATTRS);
+                                            metricAttributes);
                                     var data = message.data().orElse(null);
                                     if (data == null) {
                                         LOGGER.warning(
