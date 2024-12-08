@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package pinorobotics.jros2services.ddsrpc;
+package pinorobotics.jros2services.impl.ddsrpc;
 
 import java.nio.ByteBuffer;
 
