@@ -19,12 +19,9 @@ package pinorobotics.jros2services;
 
 import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
-import id.jros2client.impl.rmw.DdsQosMapper;
 import id.jros2client.impl.rmw.RmwConstants;
-import id.jros2client.qos.SubscriberQos;
 import id.jros2messages.Ros2MessageSerializationUtils;
 import id.jrosmessages.Message;
-import id.xfunction.Preconditions;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.IdempotentService;
@@ -36,11 +33,13 @@ import io.opentelemetry.api.metrics.Meter;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
+import java.util.concurrent.atomic.AtomicLong;
+import pinorobotics.jros2services.impl.ddsrpc.DdsRpcUtils;
 import pinorobotics.jros2services.impl.ddsrpc.SampleIdentity;
 import pinorobotics.jrosservices.JRosServiceClient;
 import pinorobotics.jrosservices.metrics.JRosServiceClientMetrics;
@@ -48,20 +47,9 @@ import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
-import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
 
 /**
  * Client which allows to interact with ROS2 Services.
- *
- * <p>Currently there is no document which would describe ROS2 Service communication, as the result
- * different ROS 2 Middleware Layers (RML) <a
- * href="https://github.com/ros2/rmw_cyclonedds/issues/184">implement it differently</a>.
- *
- * <p>As of now this client supports only Fast-DDS RML implementation since it was default one in
- * ROS2 Foxy.
- *
- * <p>In future it is possible that all RML implementations will switch to DDS-RPC standard (see <a
- * href="https://design.ros2.org/articles/ros_on_dds.html">Services and Actions</a>).
  *
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
@@ -74,9 +62,6 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
         implements JRosServiceClient<R, A> {
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
-    private static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
-    private static final SubscriberQosPolicy DEFAULT_SUBSCRIBER_QOS =
-            new DdsQosMapper().asDds(SubscriberQos.DEFAULT_SUBSCRIBER_QOS);
 
     private static final Meter METER =
             GlobalOpenTelemetry.getMeter(JRos2ServiceClient.class.getSimpleName());
@@ -102,18 +87,19 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
         }
     }
 
-    private DdsNameMapper rosNameMapper;
-    private RtpsTalkClient rtpsTalkClient;
-    private Ros2MessageSerializationUtils serializationUtils = new Ros2MessageSerializationUtils();
-    private ServiceDefinition<R, A> serviceDefinition;
-    private int status; // 0 - not started, 1 - started, 2 - stopped
-    private Map<Long, PendingRequest<A>> pendingRequests = new HashMap<>();
+    private final Ros2MessageSerializationUtils serializationUtils =
+            new Ros2MessageSerializationUtils();
+    private final Map<Long, PendingRequest<A>> pendingRequests = new ConcurrentHashMap<>();
+    private final DdsRpcUtils utils = new DdsRpcUtils();
+    private final AtomicLong requestCounter = new AtomicLong();
+    private final DdsNameMapper rosNameMapper;
+    private final RtpsTalkClient rtpsTalkClient;
+    private final ServiceDefinition<R, A> serviceDefinition;
+    private final String serviceName;
+    private final Attributes metricAttributes;
     private SubmissionPublisher<RtpsTalkDataMessage> requestsPublisher;
-    private SimpleSubscriber<RtpsTalkDataMessage> resultsSubscriber;
-    private String serviceName;
-    private long requestCounter = 1;
-    private int entityId;
-    private Attributes metricAttributes;
+    private SimpleSubscriber<RtpsTalkDataMessage> responsesSubscriber;
+    private byte[] clientGuid;
 
     /** Creates a new instance of the client */
     JRos2ServiceClient(
@@ -137,20 +123,11 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     public CompletableFuture<A> sendRequestAsync(R requestMessage) {
         LOGGER.entering("sendRequest " + serviceName);
         start();
-        var requestId = requestCounter++;
-
-        var writerGuid = ByteBuffer.allocate(16);
-        writerGuid.put(rtpsTalkClient.getConfiguration().guidPrefix());
-        writerGuid.putInt(entityId);
-        var params =
-                new Parameters(
-                        Map.of(
-                                Short.valueOf(PID_FASTDDS_SAMPLE_IDENTITY),
-                                new SampleIdentity(writerGuid.array(), requestId).toByteArray()));
+        var requestId = requestCounter.incrementAndGet();
         var data = serializationUtils.write(requestMessage);
         LOGGER.fine("Submitting request for {0}", serviceName);
         REQUESTS_METER.add(1, metricAttributes);
-        requestsPublisher.submit(new RtpsTalkDataMessage(params, data));
+        requestsPublisher.submit(newMessage(requestId, data));
 
         // register a new subscriber
         var future = new CompletableFuture<A>();
@@ -166,17 +143,14 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     @Override
     protected void onClose() {
         LOGGER.entering("close " + serviceName);
-        if (status == 1) {
-            requestsPublisher.close();
-            resultsSubscriber.getSubscription().ifPresent(Subscription::cancel);
-            status++;
-            pendingRequests
-                    .values()
-                    .forEach(
-                            result ->
-                                    result.future.completeExceptionally(
-                                            new RuntimeException("JRos2ServiceClient has closed")));
-        }
+        requestsPublisher.close();
+        responsesSubscriber.getSubscription().ifPresent(Subscription::cancel);
+        pendingRequests
+                .values()
+                .forEach(
+                        result ->
+                                result.future.completeExceptionally(
+                                        new RuntimeException("JRos2ServiceClient has closed")));
         LOGGER.exiting("close " + serviceName);
     }
 
@@ -185,73 +159,48 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
      */
     @Override
     protected void onStart() {
-        Preconditions.isTrue(status == 0, "Can be started only once");
-        status++;
-        var requestMessageClass = serviceDefinition.getServiceRequestMessage();
-        var requestMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(requestMessageClass);
         LOGGER.fine("Starting service client for {0}", serviceName);
-        var requestTopicName =
-                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, requestMessageClass);
-        requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
-        LOGGER.fine(
-                "Registering publisher for {0} with type {1}",
-                requestTopicName, requestMessageName);
-        rtpsTalkClient.publish(
-                requestTopicName,
-                requestMessageName,
-                RmwConstants.DEFAULT_PUBLISHER_QOS,
-                requestsPublisher);
+        setupResponseSubscriber();
+        setupRequestPublisher();
+    }
 
-        var responseMessageClass = serviceDefinition.getServiceResponseMessage();
-        var responseMessageName = rosNameMapper.asFullyQualifiedDdsTypeName(responseMessageClass);
-        var responseTopicName =
-                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, responseMessageClass);
-        resultsSubscriber =
+    private void setupResponseSubscriber() {
+        var messageClass = serviceDefinition.getServiceResponseMessage();
+        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageClass);
+        var rmwTopicName = rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageClass);
+        responsesSubscriber =
                 new SimpleSubscriber<>() {
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
                         LOGGER.entering("onNext " + serviceName);
                         RESPONSES_METER.add(1, metricAttributes);
                         try {
-                            var userInlineQos = message.userInlineQos().orElse(null);
-                            if (userInlineQos == null) {
-                                LOGGER.warning(
-                                        "Received RTPS message without inlineQos, ignoring it");
+                            var requestId = utils.findRequestId(message).orElse(null);
+                            if (requestId == null) {
+                                LOGGER.warning("Received response without request id, ignoring it");
                                 return;
                             }
-                            var params = userInlineQos.getParameters();
-                            if (!params.containsKey(PID_FASTDDS_SAMPLE_IDENTITY)) {
-                                LOGGER.warning("Received message without identity, ignoring it");
-                            } else {
-                                var identityBody = params.get(PID_FASTDDS_SAMPLE_IDENTITY);
-                                var identity = SampleIdentity.valueOf(identityBody);
-                                var seqNum = identity.seqNum();
-                                if (!pendingRequests.containsKey(seqNum)) {
-                                    LOGGER.warning(
-                                            "Cannot match received response with any known"
-                                                    + " requests. Ignoring response {0}...",
-                                            seqNum);
-                                } else {
-                                    LOGGER.fine("Received result for goal id {0}", seqNum);
-                                    var result = pendingRequests.get(seqNum);
-                                    GOAL_EXECUTION_TIME_METER.record(
-                                            Duration.between(result.requestedAt, Instant.now())
-                                                    .toMillis(),
-                                            metricAttributes);
-                                    var data = message.data().orElse(null);
-                                    if (data == null) {
-                                        LOGGER.warning(
-                                                "RTPS message has no data in it, ignoring it");
-                                    } else {
-                                        var response =
-                                                serializationUtils.read(
-                                                        data,
-                                                        serviceDefinition
-                                                                .getServiceResponseMessage());
-                                        result.future.complete(response);
-                                    }
-                                }
+                            if (!pendingRequests.containsKey(requestId)) {
+                                LOGGER.warning(
+                                        "Cannot match received response with any known"
+                                                + " requests. Ignoring response {0}...",
+                                        requestId);
+                                return;
                             }
+                            LOGGER.fine("Received result for goal id {0}", requestId);
+                            var result = pendingRequests.get(requestId);
+                            GOAL_EXECUTION_TIME_METER.record(
+                                    Duration.between(result.requestedAt, Instant.now()).toMillis(),
+                                    metricAttributes);
+                            var data = message.data().orElse(null);
+                            if (data == null) {
+                                LOGGER.warning("RTPS message has no data in it, ignoring it");
+                                return;
+                            }
+                            var response =
+                                    serializationUtils.read(
+                                            data, serviceDefinition.getServiceResponseMessage());
+                            result.future.complete(response);
                         } finally {
                             // request next message
                             getSubscription().get().request(1);
@@ -267,14 +216,42 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                                 .forEach(res -> res.future.completeExceptionally(throwable));
                     }
                 };
-        LOGGER.fine(
-                "Registering subscriber for {0} with type {1}",
-                responseTopicName, responseMessageName);
-        entityId =
+        LOGGER.fine("Registering subscriber for {0} with type {1}", rmwTopicName, rmwMessageType);
+        var entityId =
                 rtpsTalkClient.subscribe(
-                        responseTopicName,
-                        responseMessageName,
-                        DEFAULT_SUBSCRIBER_QOS,
-                        resultsSubscriber);
+                        rmwTopicName,
+                        rmwMessageType,
+                        DdsRpcUtils.DEFAULT_SUBSCRIBER_QOS,
+                        responsesSubscriber);
+        clientGuid = newClientGuid(rtpsTalkClient.getConfiguration().guidPrefix(), entityId);
+    }
+
+    private void setupRequestPublisher() {
+        var messageClass = serviceDefinition.getServiceRequestMessage();
+        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageClass);
+        var rmwTopicName = rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageClass);
+        requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
+        LOGGER.fine("Registering publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
+        rtpsTalkClient.publish(
+                rmwTopicName,
+                rmwMessageType,
+                RmwConstants.DEFAULT_PUBLISHER_QOS,
+                requestsPublisher);
+    }
+
+    private RtpsTalkDataMessage newMessage(long requestId, byte[] data) {
+        var params =
+                new Parameters(
+                        Map.of(
+                                DdsRpcUtils.PID_FASTDDS_SAMPLE_IDENTITY,
+                                new SampleIdentity(clientGuid, requestId).toByteArray()));
+        return new RtpsTalkDataMessage(params, data);
+    }
+
+    private byte[] newClientGuid(byte[] guidPrefix, int entityId) {
+        var clientGuid = ByteBuffer.allocate(16);
+        clientGuid.put(guidPrefix);
+        clientGuid.putInt(entityId);
+        return clientGuid.array();
     }
 }

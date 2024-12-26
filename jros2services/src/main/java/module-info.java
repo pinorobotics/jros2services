@@ -20,6 +20,16 @@
  * href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  * (Robot Operating System) Services</a>.
  *
+ * <p>Currently there is no document which would describe ROS2 Service communication, as the result
+ * different ROS 2 Middleware Layers (RMW) <a
+ * href="https://github.com/ros2/rmw_cyclonedds/issues/184">implement it differently</a>.
+ *
+ * <p>As of now this client supports only Fast-DDS RML implementation since it was default one in
+ * ROS2 Foxy.
+ *
+ * <p>In future it is possible that all RMW implementations will switch to DDS-RPC standard (see <a
+ * href="https://design.ros2.org/articles/ros_on_dds.html">Services and Actions</a>).
+ *
  * <p>For usage examples see <a href="http://pinoweb.freetzi.com/jrosservices">Documentation</a>
  *
  * @see <a href="https://github.com/pinorobotics/jros2services">GitHub repository</a>
