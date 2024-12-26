@@ -74,14 +74,15 @@ public class JRos2ServiceClientIntegrationTests {
         try (var serviceClient =
                 new JRos2ServiceClientFactory()
                         .createClient(client, new AddTwoIntsServiceDefinition(), "add_two_ints")) {
-            var seed = 63;
+            // use same values for the request as in minimal_client example
+            var seed = 41;
             var pendingResults =
-                    IntStream.range(0, 5)
+                    IntStream.rangeClosed(1, 5)
                             .mapToObj(i -> new AddTwoIntsRequestMessage(seed, i))
                             .map(req -> serviceClient.sendRequestAsync(req))
                             .toList();
-            for (int i = 0; i < pendingResults.size(); i++) {
-                var result = pendingResults.get(i).get();
+            for (int i = 1; i < pendingResults.size(); i++) {
+                var result = pendingResults.get(i - 1).get();
                 System.out.println(result);
                 assertEquals(seed + i, result.sum);
             }
