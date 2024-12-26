@@ -23,6 +23,7 @@ import id.xfunction.logging.XLogger;
 import java.util.Optional;
 import pinorobotics.jros2services.JRos2ServiceClient;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
+import pinorobotics.rtpstalk.messages.UserParameterId;
 import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
 
 /**
@@ -30,12 +31,6 @@ import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
  */
 public class DdsRpcUtils {
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
-
-    /**
-     * @see PID_CUSTOM_RELATED_SAMPLE_IDENTITY
-     *     include/fastdds/dds/core/policy/ParameterTypes.hpp:159:
-     */
-    public static final short PID_FASTDDS_SAMPLE_IDENTITY = (short) 0x800f;
 
     public static final SubscriberQosPolicy DEFAULT_SUBSCRIBER_QOS =
             new DdsQosMapper().asDds(SubscriberQos.DEFAULT_SUBSCRIBER_QOS);
@@ -47,11 +42,11 @@ public class DdsRpcUtils {
             return Optional.empty();
         }
         var params = userInlineQos.getParameters();
-        if (!params.containsKey(PID_FASTDDS_SAMPLE_IDENTITY)) {
+        if (!params.containsKey(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY)) {
             LOGGER.warning("No request id found: RTPS message without identity");
             return Optional.empty();
         }
-        var identityBody = params.get(PID_FASTDDS_SAMPLE_IDENTITY);
+        var identityBody = params.get(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY);
         var identity = SampleIdentity.valueOf(identityBody);
         return Optional.of(identity.seqNum());
     }

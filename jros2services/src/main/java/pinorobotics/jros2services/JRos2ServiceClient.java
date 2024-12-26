@@ -47,6 +47,7 @@ import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
+import pinorobotics.rtpstalk.messages.UserParameterId;
 
 /**
  * Client which allows to interact with ROS2 Services.
@@ -243,7 +244,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
         var params =
                 new Parameters(
                         Map.of(
-                                DdsRpcUtils.PID_FASTDDS_SAMPLE_IDENTITY,
+                                UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY,
                                 new SampleIdentity(clientGuid, requestId).toByteArray()));
         return new RtpsTalkDataMessage(params, data);
     }
