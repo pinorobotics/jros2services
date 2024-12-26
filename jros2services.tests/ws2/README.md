@@ -7,6 +7,17 @@ colcon build
 . install/setup.zsh
 ```
 
+# Setup
+
+**jros2services** tests expect "build" and "install" folders to be placed under "out.<ROS_DISTRO>" folder.
+
+``` bash
+rm -rf out.$ROS_DISTRO
+mkdir out.$ROS_DISTRO
+cp -rf build out.$ROS_DISTRO
+cp -rf install out.$ROS_DISTRO
+```
+
 # Run
 
 Client:
