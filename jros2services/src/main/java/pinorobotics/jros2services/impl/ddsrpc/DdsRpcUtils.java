@@ -50,4 +50,18 @@ public class DdsRpcUtils {
         var identity = SampleIdentity.valueOf(identityBody);
         return Optional.of(identity.seqNum());
     }
+
+    public Optional<byte[]> findIdentity(RtpsTalkDataMessage message) {
+        var userInlineQos = message.userInlineQos().orElse(null);
+        if (userInlineQos == null) {
+            LOGGER.warning("No request id found: RTPS message without inlineQos");
+            return Optional.empty();
+        }
+        var params = userInlineQos.getParameters();
+        if (!params.containsKey(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY)) {
+            LOGGER.warning("No request id found: RTPS message without identity");
+            return Optional.empty();
+        }
+        return Optional.of(params.get(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY));
+    }
 }

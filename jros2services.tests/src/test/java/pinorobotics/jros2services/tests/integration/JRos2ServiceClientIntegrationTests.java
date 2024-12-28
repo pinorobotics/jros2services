@@ -32,7 +32,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import pinorobotics.jros2services.JRos2ServiceClientFactory;
+import pinorobotics.jros2services.JRos2ServicesFactory;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsRequestMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsServiceDefinition;
 import pinorobotics.jrosservices.std_srvs.TriggerRequestMessage;
@@ -72,7 +72,7 @@ public class JRos2ServiceClientIntegrationTests {
     @Test
     public void test_sendRequest() throws Exception {
         try (var serviceClient =
-                new JRos2ServiceClientFactory()
+                new JRos2ServicesFactory()
                         .createClient(client, new AddTwoIntsServiceDefinition(), "add_two_ints")) {
             // use same values for the request as in minimal_client example
             var seed = 41;
@@ -92,7 +92,7 @@ public class JRos2ServiceClientIntegrationTests {
     @Test
     public void test_trigger() throws Exception {
         try (var serviceClient =
-                new JRos2ServiceClientFactory()
+                new JRos2ServicesFactory()
                         .createClient(client, new TriggerServiceDefinition(), "trigger")) {
             assertEquals(
                     """

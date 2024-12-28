@@ -15,16 +15,22 @@
 #include <chrono>
 #include <cinttypes>
 #include <memory>
+#include <sstream>
 #include "example_interfaces/srv/add_two_ints.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 using AddTwoInts = example_interfaces::srv::AddTwoInts;
+using namespace std;
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("minimal_client");
-  auto client = node->create_client<AddTwoInts>("add_two_ints");
+  auto seed = argc > 3? atoi(argv[2]): 41;
+  stringstream nodeName;
+  nodeName << "minimal_client_" << seed;
+  auto node = rclcpp::Node::make_shared(nodeName.str().c_str());
+  auto topicName = argc > 2? argv[1]: "add_two_ints";
+  auto client = node->create_client<AddTwoInts>(topicName);
   while (!client->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(node->get_logger(), "client interrupted while waiting for service to appear.");
@@ -33,19 +39,21 @@ int main(int argc, char * argv[])
     RCLCPP_INFO(node->get_logger(), "waiting for service to appear...");
   }
   auto request = std::make_shared<AddTwoInts::Request>();
-  request->a = 41;
-  request->b = 1;
-  auto result_future = client->async_send_request(request);
-  if (rclcpp::spin_until_future_complete(node, result_future) !=
-    rclcpp::FutureReturnCode::SUCCESS)
-  {
-    RCLCPP_ERROR(node->get_logger(), "service call failed :(");
-    return 1;
+  request->a = seed;
+  for (int i = 1; i <= 10; i++) {
+    request->b = i;
+    auto result_future = client->async_send_request(request);
+    if (rclcpp::spin_until_future_complete(node, result_future) !=
+      rclcpp::FutureReturnCode::SUCCESS)
+    {
+      RCLCPP_ERROR(node->get_logger(), "service call failed :(");
+      return 1;
+    }
+    auto result = result_future.get();
+    RCLCPP_INFO(
+      node->get_logger(), "result of %" PRId64 " + %" PRId64 " = %" PRId64,
+      request->a, request->b, result->sum);
   }
-  auto result = result_future.get();
-  RCLCPP_INFO(
-    node->get_logger(), "result of %" PRId64 " + %" PRId64 " = %" PRId64,
-    request->a, request->b, result->sum);
   rclcpp::shutdown();
   return 0;
 }

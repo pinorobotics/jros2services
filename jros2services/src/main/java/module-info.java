@@ -24,7 +24,7 @@
  * different ROS 2 Middleware Layers (RMW) <a
  * href="https://github.com/ros2/rmw_cyclonedds/issues/184">implement it differently</a>.
  *
- * <p>As of now this client supports only Fast-DDS RML implementation since it was default one in
+ * <p>As of now this client supports only Fast-DDS RMW implementation since it was default one in
  * ROS2 Foxy.
  *
  * <p>In future it is possible that all RMW implementations will switch to DDS-RPC standard (see <a
@@ -35,6 +35,7 @@
  * @see <a href="https://github.com/pinorobotics/jros2services">GitHub repository</a>
  * @see <a
  *     href="https://github.com/pinorobotics/jros2services/blob/main/jros2services/release/CHANGELOG.md">Releases</a>
+ * @see <a href="http://pinoweb.freetzi.com/jrosservices">Documentation</a>
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  *     Services</a>

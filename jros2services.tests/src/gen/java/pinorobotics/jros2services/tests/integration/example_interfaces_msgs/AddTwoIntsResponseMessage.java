@@ -35,6 +35,12 @@ public class AddTwoIntsResponseMessage implements Message {
 
     public long sum;
 
+    public AddTwoIntsResponseMessage() {}
+
+    public AddTwoIntsResponseMessage(long sum) {
+        this.sum = sum;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(sum);
