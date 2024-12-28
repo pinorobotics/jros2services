@@ -32,19 +32,18 @@ import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import pinorobotics.jros2services.impl.ddsrpc.DdsRpcUtils;
 import pinorobotics.jrosservices.metrics.JRosServiceMetrics;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
 import pinorobotics.rtpstalk.messages.Parameters;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
-import pinorobotics.rtpstalk.messages.UserParameterId;
 
 /**
  * ROS2 Service
@@ -131,8 +130,8 @@ public class JRos2Service<R extends Message, A extends Message> extends Idempote
                         LOGGER.entering("onNext " + serviceName);
                         REQUESTS_METER.add(1, metricAttributes);
                         try {
-                            var identity = utils.findIdentity(message).orElse(null);
-                            if (identity == null) {
+                            var identityResult = utils.findIdentity(message).orElse(null);
+                            if (identityResult == null) {
                                 LOGGER.warning("Received request without identity, ignoring it");
                                 return;
                             }
@@ -158,10 +157,17 @@ public class JRos2Service<R extends Message, A extends Message> extends Idempote
                                             responsesPublisher.submit(
                                                     new RtpsTalkDataMessage(
                                                             new Parameters(
-                                                                    Map.of(
-                                                                            UserParameterId
-                                                                                    .PID_FASTDDS_SAMPLE_IDENTITY,
-                                                                            identity)),
+                                                                    identityResult
+                                                                            .parameterIds()
+                                                                            .stream()
+                                                                            .collect(
+                                                                                    Collectors
+                                                                                            .toMap(
+                                                                                                    k ->
+                                                                                                            k,
+                                                                                                    v ->
+                                                                                                            identityResult
+                                                                                                                    .identity()))),
                                                             respomseData));
                                         } catch (Exception e) {
                                             REQUESTS_FAILED_METER.add(1, metricAttributes);

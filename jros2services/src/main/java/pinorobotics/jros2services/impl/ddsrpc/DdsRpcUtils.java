@@ -19,7 +19,11 @@ package pinorobotics.jros2services.impl.ddsrpc;
 
 import id.jros2client.impl.rmw.DdsQosMapper;
 import id.jros2client.qos.SubscriberQos;
+import id.xfunction.Preconditions;
 import id.xfunction.logging.XLogger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import pinorobotics.jros2services.JRos2ServiceClient;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
@@ -31,37 +35,64 @@ import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
  */
 public class DdsRpcUtils {
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
+    private static final String MISMATCH_ERROR =
+            "Mismatch between FastDDS legacy identity and DDS-RPC related identity";
 
     public static final SubscriberQosPolicy DEFAULT_SUBSCRIBER_QOS =
             new DdsQosMapper().asDds(SubscriberQos.DEFAULT_SUBSCRIBER_QOS);
 
     public Optional<Long> findRequestId(RtpsTalkDataMessage message) {
+        var fastDdsIdentity = findRequestId(message, UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY);
+        var relatedIdentity = findRequestId(message, UserParameterId.PID_RELATED_SAMPLE_IDENTITY);
+        if (fastDdsIdentity.isEmpty() && relatedIdentity.isEmpty()) {
+            LOGGER.warning("No request id found: RTPS message without identity");
+            return Optional.empty();
+        }
+        if (fastDdsIdentity.isPresent() && relatedIdentity.isPresent()) {
+            Preconditions.equals(fastDdsIdentity, relatedIdentity, MISMATCH_ERROR);
+            return relatedIdentity;
+        }
+        return fastDdsIdentity.or(() -> relatedIdentity);
+    }
+
+    private Optional<Long> findRequestId(RtpsTalkDataMessage message, short parameterId) {
         var userInlineQos = message.userInlineQos().orElse(null);
         if (userInlineQos == null) {
             LOGGER.warning("No request id found: RTPS message without inlineQos");
             return Optional.empty();
         }
         var params = userInlineQos.getParameters();
-        if (!params.containsKey(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY)) {
-            LOGGER.warning("No request id found: RTPS message without identity");
+        if (!params.containsKey(parameterId)) {
             return Optional.empty();
         }
-        var identityBody = params.get(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY);
+        var identityBody = params.get(parameterId);
         var identity = SampleIdentity.valueOf(identityBody);
         return Optional.of(identity.seqNum());
     }
 
-    public Optional<byte[]> findIdentity(RtpsTalkDataMessage message) {
+    /** Identity with list of parameters assigned to it */
+    public record IdentityResult(byte[] identity, List<Short> parameterIds) {}
+
+    public Optional<IdentityResult> findIdentity(RtpsTalkDataMessage message) {
         var userInlineQos = message.userInlineQos().orElse(null);
         if (userInlineQos == null) {
-            LOGGER.warning("No request id found: RTPS message without inlineQos");
+            LOGGER.warning("No identity found: RTPS message without inlineQos");
             return Optional.empty();
         }
         var params = userInlineQos.getParameters();
-        if (!params.containsKey(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY)) {
+        var parameterIds = new ArrayList<Short>();
+        var fastDdsIdentity = params.get(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY);
+        if (fastDdsIdentity != null) parameterIds.add(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY);
+        var relatedIdentity = params.get(UserParameterId.PID_RELATED_SAMPLE_IDENTITY);
+        if (relatedIdentity != null) parameterIds.add(UserParameterId.PID_RELATED_SAMPLE_IDENTITY);
+        if (fastDdsIdentity == null && relatedIdentity == null) {
             LOGGER.warning("No request id found: RTPS message without identity");
             return Optional.empty();
         }
-        return Optional.of(params.get(UserParameterId.PID_FASTDDS_SAMPLE_IDENTITY));
+        if (fastDdsIdentity != null && relatedIdentity != null)
+            Preconditions.isTrue(Arrays.equals(fastDdsIdentity, relatedIdentity), MISMATCH_ERROR);
+        return Optional.ofNullable(fastDdsIdentity)
+                .or(() -> Optional.of(relatedIdentity))
+                .map(identity -> new IdentityResult(identity, parameterIds));
     }
 }
