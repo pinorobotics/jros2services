@@ -20,7 +20,7 @@ package pinorobotics.jros2services;
 import id.jros2client.JRos2Client;
 import id.jros2client.impl.JRos2ClientImpl;
 import id.jros2client.impl.rmw.DdsNameMapper;
-import id.jrosclient.utils.RosNameUtils;
+import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +35,7 @@ import pinorobotics.jrosservices.msgs.ServiceDefinition;
  */
 public class JRos2ServicesFactory {
 
-    private DdsNameMapper nameMapper = new DdsNameMapper(new RosNameUtils());
+    private DdsNameMapper nameMapper = new DdsNameMapper();
 
     /**
      * Create ROS2 Service client
@@ -51,10 +51,30 @@ public class JRos2ServicesFactory {
             JRos2Client client, ServiceDefinition<R, A> serviceDefinition, String serviceName) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceClient<>(
-                    ros2Client.getRtpsTalkClient(), serviceDefinition, serviceName, nameMapper);
+                    ros2Client.getRtpsTalkClient(),
+                    serviceDefinition,
+                    new RosName(serviceName),
+                    nameMapper);
         } else {
             throw new IllegalArgumentException("Unknown JRos2Client implementation");
         }
+    }
+
+    /**
+     * Simplified version of {@link #createService(JRos2Client, ServiceDefinition, RosName,
+     * ServiceHandler)} where service name is converted to {@link RosName}
+     */
+    public <R extends Message, A extends Message> JRos2Service<R, A> createService(
+            JRos2Client client,
+            ServiceDefinition<R, A> serviceDefinition,
+            String serviceName,
+            ServiceHandler<R, A> handler) {
+        return createService(
+                client,
+                serviceDefinition,
+                new RosName(serviceName),
+                Executors.newCachedThreadPool(),
+                handler);
     }
 
     /**
@@ -65,7 +85,7 @@ public class JRos2ServicesFactory {
     public <R extends Message, A extends Message> JRos2Service<R, A> createService(
             JRos2Client client,
             ServiceDefinition<R, A> serviceDefinition,
-            String serviceName,
+            RosName serviceName,
             ServiceHandler<R, A> handler) {
         return createService(
                 client, serviceDefinition, serviceName, Executors.newCachedThreadPool(), handler);
@@ -79,14 +99,14 @@ public class JRos2ServicesFactory {
      * @param client ROS2 client
      * @param serviceDefinition type definitions for a service messages
      * @param serviceName name of the ROS2 service
-     * @param handler function which will process all incoming service requests
+     * @param handler service handler which will process all incoming ROS service requests
      * @param <R> request message type
      * @param <A> response message type
      */
     public <R extends Message, A extends Message> JRos2Service<R, A> createService(
             JRos2Client client,
             ServiceDefinition<R, A> serviceDefinition,
-            String serviceName,
+            RosName serviceName,
             ExecutorService executor,
             ServiceHandler<R, A> handler) {
         if (client instanceof JRos2ClientImpl ros2Client) {

@@ -21,6 +21,7 @@ import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jros2client.impl.rmw.RmwConstants;
 import id.jros2messages.Ros2MessageSerializationUtils;
+import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
 import id.xfunction.logging.XLogger;
@@ -96,7 +97,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     private final DdsNameMapper rosNameMapper;
     private final RtpsTalkClient rtpsTalkClient;
     private final ServiceDefinition<R, A> serviceDefinition;
-    private final String serviceName;
+    private final RosName serviceName;
     private final Attributes metricAttributes;
     private SubmissionPublisher<RtpsTalkDataMessage> requestsPublisher;
     private SimpleSubscriber<RtpsTalkDataMessage> responsesSubscriber;
@@ -106,7 +107,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     JRos2ServiceClient(
             RtpsTalkClient rtpsTalkClient,
             ServiceDefinition<R, A> serviceDefinition,
-            String serviceName,
+            RosName serviceName,
             DdsNameMapper rosNameMapper) {
         this.rtpsTalkClient = rtpsTalkClient;
         this.serviceDefinition = serviceDefinition;
@@ -115,7 +116,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
         metricAttributes =
                 Attributes.builder()
                         .putAll(JRos2ClientConstants.METRIC_ATTRS)
-                        .put("service", serviceName)
+                        .put("service", serviceName.toGlobalName())
                         .build();
     }
 
@@ -166,9 +167,10 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     }
 
     private void setupResponseSubscriber() {
-        var messageClass = serviceDefinition.getServiceResponseMessage();
-        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageClass);
-        var rmwTopicName = rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageClass);
+        var messageDescriptor = serviceDefinition.getServiceResponseMessage();
+        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
+        var rmwTopicName =
+                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageDescriptor);
         responsesSubscriber =
                 new SimpleSubscriber<>() {
                     @Override
@@ -200,7 +202,10 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
                             }
                             var response =
                                     serializationUtils.read(
-                                            data, serviceDefinition.getServiceResponseMessage());
+                                            data,
+                                            serviceDefinition
+                                                    .getServiceResponseMessage()
+                                                    .getMessageClass());
                             result.future.complete(response);
                         } finally {
                             // request next message
@@ -228,9 +233,10 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     }
 
     private void setupRequestPublisher() {
-        var messageClass = serviceDefinition.getServiceRequestMessage();
-        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageClass);
-        var rmwTopicName = rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageClass);
+        var messageDescriptor = serviceDefinition.getServiceRequestMessage();
+        var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
+        var rmwTopicName =
+                rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageDescriptor);
         requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
         LOGGER.fine("Registering publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.publish(

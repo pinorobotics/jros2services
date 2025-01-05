@@ -17,6 +17,7 @@
  */
 package pinorobotics.jros2services.tests.integration.example_interfaces_msgs;
 
+import id.jrosmessages.MessageDescriptor;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
 /**
@@ -26,12 +27,12 @@ public class AddTwoIntsServiceDefinition
         implements ServiceDefinition<AddTwoIntsRequestMessage, AddTwoIntsResponseMessage> {
 
     @Override
-    public Class<AddTwoIntsRequestMessage> getServiceRequestMessage() {
-        return AddTwoIntsRequestMessage.class;
+    public MessageDescriptor<AddTwoIntsRequestMessage> getServiceRequestMessage() {
+        return new MessageDescriptor<>(AddTwoIntsRequestMessage.class);
     }
 
     @Override
-    public Class<AddTwoIntsResponseMessage> getServiceResponseMessage() {
-        return AddTwoIntsResponseMessage.class;
+    public MessageDescriptor<AddTwoIntsResponseMessage> getServiceResponseMessage() {
+        return new MessageDescriptor<>(AddTwoIntsResponseMessage.class);
     }
 }
