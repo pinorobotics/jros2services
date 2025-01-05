@@ -77,8 +77,8 @@ public class JRos2ServiceIntegrationTests {
     }
 
     @Test
-    public void test_createService() throws Exception {
-        var seeds = new Random().ints(17, 0, 1_000).mapToObj(Integer::valueOf).toList();
+    public void test_happy() throws Exception {
+        var seeds = new Random().ints(17, 0, 1_000).distinct().mapToObj(Integer::valueOf).toList();
         var clientLogs = Files.createTempDirectory("test_sendRequest");
         var clientProcs =
                 seeds.stream()

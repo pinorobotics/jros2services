@@ -20,26 +20,13 @@ package pinorobotics.jros2services;
 import id.jrosmessages.Message;
 
 /**
- * ROS2 Service
+ * Service handler is responsible for executing all incoming ROS2 requests.
  *
- * @see <a
- *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
- *     Services</a>
- * @see JRos2ServicesFactory factory for available implementations of {@link JRos2Service}
- * @param <R> request message type
- * @param <A> response message type
+ * <p>Suppose to be implemented by the users.
+ *
  * @author lambdaprime intid@protonmail.com
  */
-public interface JRos2Service<R extends Message, A extends Message> extends AutoCloseable {
-
-    /**
-     * Start ROS service
-     *
-     * <p>Service will be active until it is closed with {@link #close()}
-     */
-    void start();
-
-    /** Stop ROS service */
-    @Override
-    void close();
+@FunctionalInterface
+public interface ServiceHandler<R extends Message, A extends Message> {
+    A execute(R request) throws Exception;
 }

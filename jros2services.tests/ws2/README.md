@@ -22,10 +22,10 @@ cp -rf install out.$ROS_DISTRO
 
 Client:
 ```bash
-ros2 run examples_rclcpp_minimal_client client_main
+ros2 run examples_rclcpp_minimal_client client_main --ros-args --log-level DEBUG
 ```
 
 Server:
 ```bash
-ros2 run examples_rclcpp_minimal_service service_main 
+ros2 run examples_rclcpp_minimal_service service_main --ros-args --log-level DEBUG
 ```

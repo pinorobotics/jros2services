@@ -25,6 +25,7 @@ import id.jrosmessages.Message;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import pinorobotics.jros2services.impl.JRos2ServiceImpl;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
 /**
@@ -65,7 +66,7 @@ public class JRos2ServicesFactory {
             JRos2Client client,
             ServiceDefinition<R, A> serviceDefinition,
             String serviceName,
-            Function<R, A> handler) {
+            ServiceHandler<R, A> handler) {
         return createService(
                 client, serviceDefinition, serviceName, Executors.newCachedThreadPool(), handler);
     }
@@ -87,9 +88,9 @@ public class JRos2ServicesFactory {
             ServiceDefinition<R, A> serviceDefinition,
             String serviceName,
             ExecutorService executor,
-            Function<R, A> handler) {
+            ServiceHandler<R, A> handler) {
         if (client instanceof JRos2ClientImpl ros2Client) {
-            return new JRos2Service<>(
+            return new JRos2ServiceImpl<>(
                     ros2Client.getRtpsTalkClient(),
                     serviceDefinition,
                     serviceName,
