@@ -111,7 +111,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
 
     @Override
     protected void onStart() {
-        LOGGER.fine("Starting service for {0}", serviceName);
+        LOGGER.fine("Start service {0}", serviceName);
         setupResponsePublisher();
         // subscribe to requests at the end when we ready to process them
         setupRequestSubscriber();
@@ -149,7 +149,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                                                                     .getServiceRequestMessage()
                                                                     .getMessageClass());
                                             LOGGER.fine(
-                                                    "Executing new request for {0}", serviceName);
+                                                    "Execute new request for {0}", serviceName);
                                             var responseMessage = runHandler(request);
                                             var respomseData =
                                                     serializationUtils.write(responseMessage);
@@ -188,7 +188,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                 };
 
         LOGGER.fine(
-                "Registering requests subscriber for {0} with type {1}",
+                "Register requests subscriber for {0} with type {1}",
                 rmwTopicName, rmwMessageType);
         rtpsTalkClient.subscribe(
                 rmwTopicName,
@@ -215,7 +215,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
         responsesPublisher =
                 new SubmissionPublisher<RtpsTalkDataMessage>(
                         Executors.newCachedThreadPool(), 1_000);
-        LOGGER.fine("Registering publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
+        LOGGER.fine("Register publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.publish(
                 rmwTopicName,
                 rmwMessageType,
@@ -226,6 +226,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
 
     @Override
     protected void onClose() {
+        LOGGER.fine("Stop service {0}", serviceName);
         responsesPublisher.close();
         requestsSubscriber.getSubscription().ifPresent(Subscription::cancel);
     }
