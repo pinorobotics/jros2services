@@ -22,7 +22,7 @@ import id.jrosmessages.Message;
 /**
  * Service handler is responsible for executing all incoming ROS2 requests.
  *
- * <p>Suppose to be implemented by the users.
+ * <p>Supposed to be implemented by the users.
  *
  * @author lambdaprime intid@protonmail.com
  */

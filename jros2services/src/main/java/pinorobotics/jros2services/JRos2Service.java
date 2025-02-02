@@ -25,9 +25,9 @@ import id.jrosmessages.Message;
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  *     Services</a>
- * @see JRos2ServicesFactory factory for available implementations of {@link JRos2Service}
- * @param <R> request message type
- * @param <A> response message type
+ * @see JRos2ServicesFactory Factory for available ROS2 Service implementations
+ * @param <R> service request message type
+ * @param <A> service response message type
  * @author lambdaprime intid@protonmail.com
  */
 public interface JRos2Service<R extends Message, A extends Message> extends AutoCloseable {
@@ -35,7 +35,8 @@ public interface JRos2Service<R extends Message, A extends Message> extends Auto
     /**
      * Start ROS service
      *
-     * <p>Service will be active until it is closed with {@link #close()}
+     * <p>Once started, service becomes active and accepts the requests until it is closed with
+     * {@link #close()}
      */
     void start();
 

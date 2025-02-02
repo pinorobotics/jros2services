@@ -148,8 +148,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                                                             serviceDefinition
                                                                     .getServiceRequestMessage()
                                                                     .getMessageClass());
-                                            LOGGER.fine(
-                                                    "Execute new request for {0}", serviceName);
+                                            LOGGER.fine("Execute new request for {0}", serviceName);
                                             var responseMessage = runHandler(request);
                                             var respomseData =
                                                     serializationUtils.write(responseMessage);
@@ -188,8 +187,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                 };
 
         LOGGER.fine(
-                "Register requests subscriber for {0} with type {1}",
-                rmwTopicName, rmwMessageType);
+                "Register requests subscriber for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.subscribe(
                 rmwTopicName,
                 rmwMessageType,

@@ -56,6 +56,7 @@ import pinorobotics.rtpstalk.messages.UserParameterId;
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
  *     Services</a>
+ * @see JRos2ServicesFactory Factory for available ROS2 Service client implementations
  * @param <R> request message type
  * @param <A> response message type
  * @author lambdaprime intid@protonmail.com

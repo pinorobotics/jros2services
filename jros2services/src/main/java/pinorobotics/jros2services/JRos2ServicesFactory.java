@@ -24,7 +24,6 @@ import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
 import pinorobotics.jros2services.impl.JRos2ServiceImpl;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
@@ -80,7 +79,8 @@ public class JRos2ServicesFactory {
     /**
      * Create ROS2 Service with {@link Executors#newCachedThreadPool()} as default executor
      *
-     * @see #createService(JRos2Client, ServiceDefinition, String, Function, ExecutorService)
+     * @see JRos2ServicesFactory#createService(JRos2Client, ServiceDefinition, RosName,
+     *     ExecutorService, ServiceHandler)
      */
     public <R extends Message, A extends Message> JRos2Service<R, A> createService(
             JRos2Client client,
@@ -99,7 +99,7 @@ public class JRos2ServicesFactory {
      * @param client ROS2 client
      * @param serviceDefinition type definitions for a service messages
      * @param serviceName name of the ROS2 service
-     * @param handler service handler which will process all incoming ROS service requests
+     * @param handler service handler to process all incoming ROS service requests
      * @param <R> request message type
      * @param <A> response message type
      */

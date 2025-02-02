@@ -1,3 +1,21 @@
+# Version 8
+
+- Better logging
+- Update to the latest changes in jros modules (RosName, MessageDescriptor)
+- Add ServiceHandler and move service implementation to private package
+- Add support to run ROS services in Jazzy
+- Add support to run ROS services from Java
+- Add instructions for test environment setup
+- Update test to use same values as in minimal_client example
+- Update rtpstalk version
+- Extract DDS logic to separate class
+- Move DDS logic under impl package
+- Including copyright into the license file
+- Including service name into the metrics
+- Updating jrosservices to new version
+
+[jros2services-v8.0.zip](https://github.com/pinorobotics/jros2services/raw/main/jros2services/release/jros2services-v8.0.zip)
+
 # Version 7
 
 - Issue pinorobotics/jros2services#1 Fixing processing of empty messages, adding tests
