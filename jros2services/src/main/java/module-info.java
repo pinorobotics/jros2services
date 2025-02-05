@@ -42,4 +42,8 @@ module jros2services {
     requires io.opentelemetry.api;
 
     exports pinorobotics.jros2services;
+    exports pinorobotics.jros2services.impl to
+            jros2services.tests;
+    exports pinorobotics.jros2services.impl.ddsrpc to
+            jros2services.tests;
 }

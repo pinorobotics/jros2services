@@ -52,10 +52,7 @@ public class JRos2ServicesFactory {
             JRos2Client client, ServiceDefinition<R, A> serviceDefinition, String serviceName) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceClientImpl<>(
-                    ros2Client.getRtpsTalkClient(),
-                    serviceDefinition,
-                    new RosName(serviceName),
-                    nameMapper);
+                    ros2Client, serviceDefinition, new RosName(serviceName), nameMapper);
         } else {
             throw new IllegalArgumentException("Unknown JRos2Client implementation");
         }
@@ -113,12 +110,7 @@ public class JRos2ServicesFactory {
             ServiceHandler<R, A> handler) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceImpl<>(
-                    ros2Client.getRtpsTalkClient(),
-                    serviceDefinition,
-                    serviceName,
-                    nameMapper,
-                    executor,
-                    handler);
+                    ros2Client, serviceDefinition, serviceName, nameMapper, executor, handler);
         } else {
             throw new IllegalArgumentException("Unknown JRos2Client implementation");
         }

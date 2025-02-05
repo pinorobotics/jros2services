@@ -18,6 +18,7 @@
 package pinorobotics.jros2services.impl;
 
 import id.jros2client.impl.JRos2ClientConstants;
+import id.jros2client.impl.JRos2ClientImpl;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jros2client.impl.rmw.RmwConstants;
 import id.jros2messages.Ros2MessageSerializationUtils;
@@ -76,7 +77,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
 
     private Ros2MessageSerializationUtils serializationUtils = new Ros2MessageSerializationUtils();
     private DdsRpcUtils utils = new DdsRpcUtils();
-    private RtpsTalkClient rtpsTalkClient;
+    private JRos2ClientImpl jros2Client;
     private ServiceDefinition<R, A> serviceDefinition;
     private ExecutorService executor;
     private RosName serviceName;
@@ -90,13 +91,13 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
      * @param handler service handler which will process all incoming requests
      */
     public JRos2ServiceImpl(
-            RtpsTalkClient rtpsTalkClient,
+            JRos2ClientImpl jros2Client,
             ServiceDefinition<R, A> serviceDefinition,
             RosName serviceName,
             DdsNameMapper rosNameMapper,
             ExecutorService executor,
             ServiceHandler<R, A> handler) {
-        this.rtpsTalkClient = rtpsTalkClient;
+        this.jros2Client = jros2Client;
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
         this.rosNameMapper = rosNameMapper;
@@ -112,12 +113,13 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
     @Override
     protected void onStart() {
         LOGGER.fine("Start service {0}", serviceName);
-        setupResponsePublisher();
+        jros2Client.start();
+        setupResponsePublisher(jros2Client.getRtpsTalkClient());
         // subscribe to requests at the end when we ready to process them
-        setupRequestSubscriber();
+        setupRequestSubscriber(jros2Client.getRtpsTalkClient());
     }
 
-    private void setupRequestSubscriber() {
+    private void setupRequestSubscriber(RtpsTalkClient rtpsTalkClient) {
         var messageDescriptor = serviceDefinition.getServiceRequestMessage();
         var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
         var rmwTopicName =
@@ -205,7 +207,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
         }
     }
 
-    private void setupResponsePublisher() {
+    private void setupResponsePublisher(RtpsTalkClient rtpsTalkClient) {
         var messageDescriptor = serviceDefinition.getServiceResponseMessage();
         var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
         var rmwTopicName =

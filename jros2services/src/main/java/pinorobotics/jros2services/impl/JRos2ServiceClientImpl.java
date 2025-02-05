@@ -18,6 +18,7 @@
 package pinorobotics.jros2services.impl;
 
 import id.jros2client.impl.JRos2ClientConstants;
+import id.jros2client.impl.JRos2ClientImpl;
 import id.jros2client.impl.rmw.DdsNameMapper;
 import id.jros2client.impl.rmw.RmwConstants;
 import id.jros2messages.Ros2MessageSerializationUtils;
@@ -96,7 +97,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
     private final DdsRpcUtils utils = new DdsRpcUtils();
     private final AtomicLong requestCounter = new AtomicLong();
     private final DdsNameMapper rosNameMapper;
-    private final RtpsTalkClient rtpsTalkClient;
+    private final JRos2ClientImpl jros2Client;
     private final ServiceDefinition<R, A> serviceDefinition;
     private final RosName serviceName;
     private final Attributes metricAttributes;
@@ -106,11 +107,11 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
 
     /** Creates a new instance of the client */
     public JRos2ServiceClientImpl(
-            RtpsTalkClient rtpsTalkClient,
+            JRos2ClientImpl jros2Client,
             ServiceDefinition<R, A> serviceDefinition,
             RosName serviceName,
             DdsNameMapper rosNameMapper) {
-        this.rtpsTalkClient = rtpsTalkClient;
+        this.jros2Client = jros2Client;
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
         this.rosNameMapper = rosNameMapper;
@@ -153,7 +154,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
                 .forEach(
                         result ->
                                 result.future.completeExceptionally(
-                                        new RuntimeException("JRos2ServiceClient has closed")));
+                                        new RuntimeException("Client has closed")));
         LOGGER.exiting("close " + serviceName);
     }
 
@@ -163,11 +164,12 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
     @Override
     protected void onStart() {
         LOGGER.fine("Starting service client for {0}", serviceName);
-        setupResponseSubscriber();
-        setupRequestPublisher();
+        jros2Client.start();
+        setupResponseSubscriber(jros2Client.getRtpsTalkClient());
+        setupRequestPublisher(jros2Client.getRtpsTalkClient());
     }
 
-    private void setupResponseSubscriber() {
+    private void setupResponseSubscriber(RtpsTalkClient rtpsTalkClient) {
         var messageDescriptor = serviceDefinition.getServiceResponseMessage();
         var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
         var rmwTopicName =
@@ -233,7 +235,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
         clientGuid = newClientGuid(rtpsTalkClient.getConfiguration().guidPrefix(), entityId);
     }
 
-    private void setupRequestPublisher() {
+    private void setupRequestPublisher(RtpsTalkClient rtpsTalkClient) {
         var messageDescriptor = serviceDefinition.getServiceRequestMessage();
         var rmwMessageType = rosNameMapper.asFullyQualifiedDdsTypeName(messageDescriptor);
         var rmwTopicName =
