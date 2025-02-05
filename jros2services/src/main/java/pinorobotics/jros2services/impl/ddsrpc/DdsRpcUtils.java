@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import pinorobotics.jros2services.JRos2ServiceClient;
 import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
 import pinorobotics.rtpstalk.messages.UserParameterId;
 import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
@@ -34,7 +33,7 @@ import pinorobotics.rtpstalk.qos.SubscriberQosPolicy;
  * @author lambdaprime intid@protonmail.com
  */
 public class DdsRpcUtils {
-    private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
+    private static final XLogger LOGGER = XLogger.getLogger(DdsRpcUtils.class);
     private static final String MISMATCH_ERROR =
             "Mismatch between FastDDS legacy identity and DDS-RPC related identity";
 

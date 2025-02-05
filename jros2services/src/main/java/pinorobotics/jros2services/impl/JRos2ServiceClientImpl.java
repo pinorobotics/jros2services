@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package pinorobotics.jros2services;
+package pinorobotics.jros2services.impl;
 
 import id.jros2client.impl.JRos2ClientConstants;
 import id.jros2client.impl.rmw.DdsNameMapper;
@@ -51,7 +51,7 @@ import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
 import pinorobotics.rtpstalk.messages.UserParameterId;
 
 /**
- * Client which allows to interact with ROS2 Services.
+ * Client implementation which allows to interact with ROS2 Services.
  *
  * @see <a
  *     href="https://docs.ros.org/en/galactic/Tutorials/Services/Understanding-ROS2-Services.html">ROS2
@@ -61,13 +61,13 @@ import pinorobotics.rtpstalk.messages.UserParameterId;
  * @param <A> response message type
  * @author lambdaprime intid@protonmail.com
  */
-public class JRos2ServiceClient<R extends Message, A extends Message> extends IdempotentService
+public class JRos2ServiceClientImpl<R extends Message, A extends Message> extends IdempotentService
         implements JRosServiceClient<R, A> {
 
-    private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClient.class);
+    private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClientImpl.class);
 
     private static final Meter METER =
-            GlobalOpenTelemetry.getMeter(JRos2ServiceClient.class.getSimpleName());
+            GlobalOpenTelemetry.getMeter(JRos2ServiceClientImpl.class.getSimpleName());
     private static final LongCounter REQUESTS_METER =
             METER.counterBuilder(JRosServiceClientMetrics.REQUESTS_SENT_COUNT_METRIC)
                     .setDescription(JRosServiceClientMetrics.REQUESTS_SENT_COUNT_METRIC_DESCRIPTION)
@@ -105,7 +105,7 @@ public class JRos2ServiceClient<R extends Message, A extends Message> extends Id
     private byte[] clientGuid;
 
     /** Creates a new instance of the client */
-    JRos2ServiceClient(
+    public JRos2ServiceClientImpl(
             RtpsTalkClient rtpsTalkClient,
             ServiceDefinition<R, A> serviceDefinition,
             RosName serviceName,
