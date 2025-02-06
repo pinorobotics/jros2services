@@ -46,12 +46,14 @@ public class JRos2ServiceClientTests {
                         isStarted[0] = true;
                     }
                 };
-        new JRos2ServiceClientImpl<>(
+        try (var client =
+                new JRos2ServiceClientImpl<>(
                         mockJRosClient,
                         new AddTwoIntsServiceDefinition(),
                         new RosName("serviceHello"),
-                        new DdsNameMapper())
-                .start();
+                        new DdsNameMapper())) {
+            client.start();
+        }
         Assertions.assertEquals(true, isStarted[0]);
     }
 }
