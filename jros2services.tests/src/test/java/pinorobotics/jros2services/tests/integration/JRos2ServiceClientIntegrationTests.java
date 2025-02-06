@@ -25,7 +25,6 @@ import id.opentelemetry.exporters.extensions.ElasticsearchMetricsExtension;
 import id.xfunction.lang.XExec;
 import id.xfunction.lang.XProcess;
 import id.xfunction.logging.XLogger;
-import java.net.MalformedURLException;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -53,7 +52,7 @@ public class JRos2ServiceClientIntegrationTests {
     }
 
     @BeforeEach
-    public void setup() throws MalformedURLException {
+    public void setup() {
         service =
                 new XExec(
                                 "ws2/out.%s/build/examples_rclcpp_minimal_service/service_main"
@@ -64,7 +63,7 @@ public class JRos2ServiceClientIntegrationTests {
     }
 
     @AfterEach
-    public void clean() throws Exception {
+    public void clean() {
         client.close();
         service.destroyAllForcibly();
     }
@@ -100,6 +99,20 @@ public class JRos2ServiceClientIntegrationTests {
                     """
                             .strip(),
                     serviceClient.sendRequestAsync(new TriggerRequestMessage()).get().toString());
+        }
+    }
+
+    @Test
+    public void test_example_from_documentation() throws Exception {
+        var clientFactory = new JRos2ClientFactory();
+        var serviceClientFactory = new JRos2ServicesFactory();
+        try (var client = clientFactory.createClient();
+                var serviceClient =
+                        serviceClientFactory.createClient(
+                                client, new AddTwoIntsServiceDefinition(), "add_two_ints")) {
+            var request = new AddTwoIntsRequestMessage(3, 2);
+            var response = serviceClient.sendRequestAsync(request).get();
+            System.out.println(response);
         }
     }
 }

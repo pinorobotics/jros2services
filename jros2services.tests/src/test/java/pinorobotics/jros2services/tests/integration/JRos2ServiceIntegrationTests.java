@@ -25,7 +25,6 @@ import id.xfunction.lang.XExec;
 import id.xfunction.lang.XProcess;
 import id.xfunction.logging.XLogger;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Random;
@@ -38,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import pinorobotics.jros2services.JRos2ServicesFactory;
+import pinorobotics.jros2services.ServiceHandler;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsRequestMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsResponseMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsServiceDefinition;
@@ -58,7 +58,7 @@ public class JRos2ServiceIntegrationTests {
     }
 
     @BeforeEach
-    public void setup() throws MalformedURLException {
+    public void setup() {
         jrosClient =
                 new JRos2ClientFactory()
                         .createClient(
@@ -72,7 +72,7 @@ public class JRos2ServiceIntegrationTests {
     }
 
     @AfterEach
-    public void clean() throws Exception {
+    public void clean() {
         jrosClient.close();
     }
 
@@ -138,5 +138,32 @@ public class JRos2ServiceIntegrationTests {
 
     private AddTwoIntsResponseMessage proc(AddTwoIntsRequestMessage request) {
         return new AddTwoIntsResponseMessage(request.a + request.b);
+    }
+
+    public static void test_example_from_documentation() throws IOException {
+        var clientFactory = new JRos2ClientFactory();
+        var serviceClientFactory = new JRos2ServicesFactory();
+        ServiceHandler<AddTwoIntsRequestMessage, AddTwoIntsResponseMessage> proc =
+                request -> {
+                    System.out.println("Received new request " + request);
+                    var response = new AddTwoIntsResponseMessage(request.a + request.b);
+                    System.out.println("Result " + response);
+                    return response;
+                };
+        try (var client = clientFactory.createClient();
+                var service =
+                        serviceClientFactory.createService(
+                                client,
+                                new AddTwoIntsServiceDefinition(),
+                                "jros_add_two_ints",
+                                proc)) {
+            service.start();
+            System.out.println("Press Enter to stop ROS service...");
+            System.in.read();
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        test_example_from_documentation();
     }
 }
