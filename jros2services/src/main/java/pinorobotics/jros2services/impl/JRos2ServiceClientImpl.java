@@ -41,9 +41,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.atomic.AtomicLong;
+import pinorobotics.jros2services.JRos2ServiceClient;
+import pinorobotics.jros2services.JRos2ServicesFactory;
 import pinorobotics.jros2services.impl.ddsrpc.DdsRpcUtils;
 import pinorobotics.jros2services.impl.ddsrpc.SampleIdentity;
-import pinorobotics.jrosservices.JRosServiceClient;
 import pinorobotics.jrosservices.metrics.JRosServiceClientMetrics;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 import pinorobotics.rtpstalk.RtpsTalkClient;
@@ -63,7 +64,7 @@ import pinorobotics.rtpstalk.messages.UserParameterId;
  * @author lambdaprime intid@protonmail.com
  */
 public class JRos2ServiceClientImpl<R extends Message, A extends Message> extends IdempotentService
-        implements JRosServiceClient<R, A> {
+        implements JRos2ServiceClient<R, A> {
 
     private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClientImpl.class);
 

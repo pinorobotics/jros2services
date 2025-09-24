@@ -25,7 +25,6 @@ import pinorobotics.jrosservices.msgs.ServiceDefinition;
  */
 public class AddTwoIntsServiceDefinition
         implements ServiceDefinition<AddTwoIntsRequestMessage, AddTwoIntsResponseMessage> {
-
     private static final MessageDescriptor<AddTwoIntsRequestMessage> REQUEST_MESSAGE_DESCRIPTOR =
             new MessageDescriptor<>(AddTwoIntsRequestMessage.class);
     private static final MessageDescriptor<AddTwoIntsResponseMessage> RESPONSE_MESSAGE_DESCRIPTOR =

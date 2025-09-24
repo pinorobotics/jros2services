@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import pinorobotics.jros2services.impl.JRos2ServiceClientImpl;
 import pinorobotics.jros2services.impl.JRos2ServiceImpl;
-import pinorobotics.jrosservices.JRosServiceClient;
 import pinorobotics.jrosservices.msgs.ServiceDefinition;
 
 /**
@@ -48,7 +47,7 @@ public class JRos2ServicesFactory {
      * @param <R> request message type
      * @param <A> response message type
      */
-    public <R extends Message, A extends Message> JRosServiceClient<R, A> createClient(
+    public <R extends Message, A extends Message> JRos2ServiceClient<R, A> createClient(
             JRos2Client client, ServiceDefinition<R, A> serviceDefinition, String serviceName) {
         if (client instanceof JRos2ClientImpl ros2Client) {
             return new JRos2ServiceClientImpl<>(
