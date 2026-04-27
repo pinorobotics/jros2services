@@ -40,4 +40,7 @@ public interface JRos2ServiceClient<R extends Message, A extends Message>
     /** {@inheritDoc} */
     @Override
     CompletableFuture<A> sendRequestAsync(R requestMessage);
+
+    @Override
+    void close();
 }

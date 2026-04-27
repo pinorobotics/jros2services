@@ -21,23 +21,25 @@ import id.jros2client.JRos2Client;
 import id.jros2client.JRos2ClientConfiguration;
 import id.jros2client.JRos2ClientFactory;
 import id.opentelemetry.exporters.extensions.ElasticsearchMetricsExtension;
-import id.xfunction.lang.XExec;
-import id.xfunction.lang.XProcess;
 import id.xfunction.logging.XLogger;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
-import java.util.Random;
+import java.util.List;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import pinorobotics.jros2services.JRos2ServicesFactory;
 import pinorobotics.jros2services.ServiceHandler;
+import pinorobotics.jros2services.tests.integration.ClientExecutor.Result;
+import pinorobotics.jros2services.tests.integration.clientexecutors.JRos2ServiceClientExecutor;
+import pinorobotics.jros2services.tests.integration.clientexecutors.ThirdpartyClientExecutor;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsRequestMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsResponseMessage;
 import pinorobotics.jros2services.tests.integration.example_interfaces_msgs.AddTwoIntsServiceDefinition;
@@ -49,7 +51,7 @@ import pinorobotics.rtpstalk.RtpsTalkConfiguration;
 @ExtendWith({ElasticsearchMetricsExtension.class})
 public class JRos2ServiceIntegrationTests {
 
-    private static final String TOPIC_NAME = "jros_add_two_ints";
+    private static final String SERVICE_NAME = "jros_add_two_ints";
     private JRos2Client jrosClient;
 
     @BeforeAll
@@ -76,57 +78,49 @@ public class JRos2ServiceIntegrationTests {
         jrosClient.close();
     }
 
-    @Test
-    public void test_happy() throws Exception {
-        var seeds = new Random().ints(17, 0, 1_000).distinct().mapToObj(Integer::valueOf).toList();
-        var clientLogs = Files.createTempDirectory("test_sendRequest");
-        var clientProcs =
-                seeds.stream()
-                        .map(
-                                seed ->
-                                        new XExec(
-                                                        "ws2/out.%s/build/examples_rclcpp_minimal_client/client_main %s %d --ros-args --log-level DEBUG"
-                                                                .formatted(
-                                                                        System.getenv("ROS_DISTRO"),
-                                                                        TOPIC_NAME,
-                                                                        seed))
-                                                .start()
-                                                .stderrAsync(
-                                                        line -> {
-                                                            try {
-                                                                Files.writeString(
-                                                                        clientLogs.resolve(
-                                                                                "" + seed),
-                                                                        line + "\n",
-                                                                        StandardOpenOption.CREATE,
-                                                                        StandardOpenOption.APPEND);
-                                                                System.out.println(line);
-                                                            } catch (IOException e) {
-                                                                e.printStackTrace();
-                                                            }
-                                                        }))
-                        .toList();
+    static Stream<ClientExecutor> dataProvider() {
+        return Stream.of(
+                new ThirdpartyClientExecutor(17, SERVICE_NAME),
+                new JRos2ServiceClientExecutor(1, SERVICE_NAME));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataProvider")
+    public void test_happy(ClientExecutor clientExecutor) throws Exception {
+        /* --------------------------------------------------------------
+         * 1️⃣  Execute the third‑party client processes via the new
+         *     {@link ClientExecutor}.  The method returns a list of
+         *     {@link Future}s – each future completes with the captured log.
+         * -------------------------------------------------------------- */
+        List<Future<Result>> futures = clientExecutor.executeClientsAsync();
+
+        /* --------------------------------------------------------------
+         * 2️⃣  Start the ROS‑2 service that the clients call.
+         * -------------------------------------------------------------- */
         try (var service =
                 new JRos2ServicesFactory()
                         .createService(
                                 jrosClient,
                                 new AddTwoIntsServiceDefinition(),
-                                TOPIC_NAME,
+                                SERVICE_NAME,
                                 this::proc)) {
             service.start();
-            for (int i = 0; i < seeds.size(); i++) {
-                var proc = clientProcs.get(i);
-                Assertions.assertEquals(0, proc.await());
-                var actualOutput =
-                        Files.readAllLines(clientLogs.resolve("" + seeds.get(i))).stream()
-                                .filter(l -> l.startsWith("[INFO]"))
-                                .filter(l -> !l.contains("waiting for service to appear"))
-                                .map(l -> l.replaceAll("\\[.*\\]", ""))
-                                .collect(Collectors.joining("\n"));
-                Assertions.assertEquals(generateExpectedOutput(seeds.get(i)), actualOutput);
+
+            /* --------------------------------------------------------------
+             * 3️⃣  Wait for every client process to finish successfully.
+             *     The call to {@code future.get()} will re‑throw if the
+             *     process ended with a non‑zero exit code or if an I/O error
+             *     occurred, which matches the original {@code assertEquals(0,
+             *     proc.await())} behaviour.
+             * -------------------------------------------------------------- */
+            for (Future<Result> future : futures) {
+                var result = future.get();
+                String actualOutput = result.output();
+                int seed = result.seed();
+                Assertions.assertEquals(generateExpectedOutput(seed), actualOutput);
             }
         } finally {
-            clientProcs.forEach(XProcess::destroyAllForcibly);
+            clientExecutor.close();
         }
     }
 
