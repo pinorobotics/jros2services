@@ -28,10 +28,9 @@ public interface ClientExecutor extends AutoCloseable {
     record Result(int seed, String output) {}
 
     /**
-     * Executes client processes asynchronously for the supplied topic name.
+     * Executes client processes asynchronously
      *
-     * @return a list of {@link Future}s, each completing with the captured log output
-     * @throws Exception if an I/O or process error occurs
+     * @return a list of {@link Future}s, each completing with the captured result
      */
     List<Future<Result>> executeClientsAsync() throws Exception;
 

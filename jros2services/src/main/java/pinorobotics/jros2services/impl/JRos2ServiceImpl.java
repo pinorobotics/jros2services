@@ -25,6 +25,7 @@ import id.jros2messages.Ros2MessageSerializationUtils;
 import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
+import id.xfunction.logging.TracingToken;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.IdempotentService;
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -56,8 +57,6 @@ import pinorobotics.rtpstalk.messages.RtpsTalkDataMessage;
 public class JRos2ServiceImpl<R extends Message, A extends Message> extends IdempotentService
         implements JRos2Service<R, A> {
 
-    private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceImpl.class);
-
     private static final Meter METER =
             GlobalOpenTelemetry.getMeter(JRos2ServiceImpl.class.getSimpleName());
     private static final LongCounter REQUESTS_METER =
@@ -75,6 +74,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                     .ofLongs()
                     .build();
 
+    private final XLogger logger;
     private Ros2MessageSerializationUtils serializationUtils = new Ros2MessageSerializationUtils();
     private DdsRpcUtils utils = new DdsRpcUtils();
     private JRos2ClientImpl jros2Client;
@@ -97,6 +97,10 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
             DdsNameMapper rosNameMapper,
             ExecutorService executor,
             ServiceHandler<R, A> handler) {
+        this.logger =
+                XLogger.getLogger(
+                        JRos2ServiceImpl.class,
+                        new TracingToken("" + hashCode(), serviceName.name()));
         this.jros2Client = jros2Client;
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
@@ -112,7 +116,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
 
     @Override
     protected void onStart() {
-        LOGGER.fine("Start service {0}", serviceName);
+        logger.fine("Start service {0}", serviceName);
         jros2Client.start();
         setupResponsePublisher(jros2Client.getRtpsTalkClient());
         // subscribe to requests at the end when we ready to process them
@@ -128,17 +132,17 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                 new SimpleSubscriber<>() {
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
-                        LOGGER.entering("onNext " + serviceName);
+                        logger.entering("onNext " + serviceName);
                         REQUESTS_METER.add(1, metricAttributes);
                         try {
                             var identityResult = utils.findIdentity(message).orElse(null);
                             if (identityResult == null) {
-                                LOGGER.warning("Received request without identity, ignoring it");
+                                logger.warning("Received request without identity, ignoring it");
                                 return;
                             }
                             var requestData = message.data().orElse(null);
                             if (requestData == null) {
-                                LOGGER.warning("RTPS message has no data in it, ignoring it");
+                                logger.warning("RTPS message has no data in it, ignoring it");
                                 return;
                             }
                             executor.submit(
@@ -150,7 +154,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                                                             serviceDefinition
                                                                     .getServiceRequestMessage()
                                                                     .getMessageClass());
-                                            LOGGER.fine("Execute new request for {0}", serviceName);
+                                            logger.fine("Execute new request for {0}", serviceName);
                                             var responseMessage = runHandler(request);
                                             var respomseData =
                                                     serializationUtils.write(responseMessage);
@@ -172,10 +176,10 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                                                             respomseData));
                                         } catch (Exception e) {
                                             REQUESTS_FAILED_METER.add(1, metricAttributes);
-                                            LOGGER.severe(
+                                            logger.severe(
                                                     "Service handler exception: {0}",
                                                     e.getMessage());
-                                            LOGGER.fine(e);
+                                            logger.fine(e);
                                         }
                                     });
                         } catch (Exception e) {
@@ -183,12 +187,12 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
                         } finally {
                             // request next message
                             getSubscription().get().request(1);
-                            LOGGER.exiting("onNext " + serviceName);
+                            logger.exiting("onNext " + serviceName);
                         }
                     }
                 };
 
-        LOGGER.fine(
+        logger.fine(
                 "Register requests subscriber for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.subscribe(
                 rmwTopicName,
@@ -215,7 +219,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
         responsesPublisher =
                 new SubmissionPublisher<RtpsTalkDataMessage>(
                         Executors.newCachedThreadPool(), 1_000);
-        LOGGER.fine("Register publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
+        logger.fine("Register publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.publish(
                 rmwTopicName,
                 rmwMessageType,
@@ -226,7 +230,7 @@ public class JRos2ServiceImpl<R extends Message, A extends Message> extends Idem
 
     @Override
     protected void onClose() {
-        LOGGER.fine("Stop service {0}", serviceName);
+        logger.fine("Stop service {0}", serviceName);
         responsesPublisher.close();
         requestsSubscriber.getSubscription().ifPresent(Subscription::cancel);
     }

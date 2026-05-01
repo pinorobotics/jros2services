@@ -47,7 +47,7 @@ public class JRos2ServiceClientExecutor implements ClientExecutor {
     private String serviceName;
     private int streamSize;
     private List<JRos2Client> jrosClients = new ArrayList<>();
-    private List<JRos2ServiceClient<?, ?>> clients = new ArrayList<>();
+    private List<JRos2ServiceClient<?, ?>> serviceClients = new ArrayList<>();
 
     public JRos2ServiceClientExecutor(int streamSize, String serviceName) {
         this.streamSize = streamSize;
@@ -83,7 +83,7 @@ public class JRos2ServiceClientExecutor implements ClientExecutor {
                     new JRos2ServicesFactory()
                             .createClient(
                                     jrosClient, new AddTwoIntsServiceDefinition(), serviceName);
-            clients.add(serviceClient);
+            serviceClients.add(serviceClient);
             List<CompletableFuture<String>> futures = new ArrayList<>();
             for (int i = 1; i <= 10; i++) {
                 var req = new AddTwoIntsRequestMessage(seed, i);
@@ -108,7 +108,7 @@ public class JRos2ServiceClientExecutor implements ClientExecutor {
 
     @Override
     public void close() {
-        clients.forEach(JRos2ServiceClient::close);
+        serviceClients.forEach(JRos2ServiceClient::close);
         jrosClients.forEach(JRos2Client::close);
     }
 }

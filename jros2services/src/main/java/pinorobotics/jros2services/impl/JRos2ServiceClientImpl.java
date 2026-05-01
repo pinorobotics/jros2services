@@ -25,6 +25,7 @@ import id.jros2messages.Ros2MessageSerializationUtils;
 import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import id.xfunction.concurrent.flow.SimpleSubscriber;
+import id.xfunction.logging.TracingToken;
 import id.xfunction.logging.XLogger;
 import id.xfunction.util.IdempotentService;
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -66,8 +67,6 @@ import pinorobotics.rtpstalk.messages.UserParameterId;
 public class JRos2ServiceClientImpl<R extends Message, A extends Message> extends IdempotentService
         implements JRos2ServiceClient<R, A> {
 
-    private static final XLogger LOGGER = XLogger.getLogger(JRos2ServiceClientImpl.class);
-
     private static final Meter METER =
             GlobalOpenTelemetry.getMeter(JRos2ServiceClientImpl.class.getSimpleName());
     private static final LongCounter REQUESTS_METER =
@@ -92,6 +91,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
         }
     }
 
+    private final XLogger logger;
     private final Ros2MessageSerializationUtils serializationUtils =
             new Ros2MessageSerializationUtils();
     private final Map<Long, PendingRequest<A>> pendingRequests = new ConcurrentHashMap<>();
@@ -112,6 +112,10 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
             ServiceDefinition<R, A> serviceDefinition,
             RosName serviceName,
             DdsNameMapper rosNameMapper) {
+        this.logger =
+                XLogger.getLogger(
+                        JRos2ServiceClientImpl.class,
+                        new TracingToken("" + hashCode(), serviceName.name()));
         this.jros2Client = jros2Client;
         this.serviceDefinition = serviceDefinition;
         this.serviceName = serviceName;
@@ -126,11 +130,11 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
     /** {@inheritDoc} */
     @Override
     public CompletableFuture<A> sendRequestAsync(R requestMessage) {
-        LOGGER.entering("sendRequest " + serviceName);
+        logger.entering("sendRequest " + serviceName);
         start();
         var requestId = requestCounter.incrementAndGet();
         var data = serializationUtils.write(requestMessage);
-        LOGGER.fine("Submitting request for {0}", serviceName);
+        logger.fine("Submitting request for {0}", serviceName);
         REQUESTS_METER.add(1, metricAttributes);
         requestsPublisher.submit(newMessage(requestId, data));
 
@@ -138,7 +142,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
         var future = new CompletableFuture<A>();
         pendingRequests.put(requestId, new PendingRequest<A>(future));
 
-        LOGGER.exiting("sendRequest " + serviceName);
+        logger.exiting("sendRequest " + serviceName);
         return future;
     }
 
@@ -147,7 +151,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
      */
     @Override
     protected void onClose() {
-        LOGGER.entering("close " + serviceName);
+        logger.entering("close " + serviceName);
         requestsPublisher.close();
         responsesSubscriber.getSubscription().ifPresent(Subscription::cancel);
         pendingRequests
@@ -156,7 +160,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
                         result ->
                                 result.future.completeExceptionally(
                                         new RuntimeException("Client has closed")));
-        LOGGER.exiting("close " + serviceName);
+        logger.exiting("close " + serviceName);
     }
 
     /**
@@ -164,7 +168,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
      */
     @Override
     protected void onStart() {
-        LOGGER.fine("Starting service client for {0}", serviceName);
+        logger.fine("Start service client for {0}", serviceName);
         jros2Client.start();
         setupResponseSubscriber(jros2Client.getRtpsTalkClient());
         setupRequestPublisher(jros2Client.getRtpsTalkClient());
@@ -179,29 +183,29 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
                 new SimpleSubscriber<>() {
                     @Override
                     public void onNext(RtpsTalkDataMessage message) {
-                        LOGGER.entering("onNext " + serviceName);
+                        logger.entering("onNext " + serviceName);
                         RESPONSES_METER.add(1, metricAttributes);
                         try {
                             var requestId = utils.findRequestId(message).orElse(null);
                             if (requestId == null) {
-                                LOGGER.warning("Received response without request id, ignoring it");
+                                logger.warning("Received response without request id, ignoring it");
                                 return;
                             }
                             if (!pendingRequests.containsKey(requestId)) {
-                                LOGGER.warning(
+                                logger.warning(
                                         "Cannot match received response with any known"
                                                 + " requests. Ignoring response {0}...",
                                         requestId);
                                 return;
                             }
-                            LOGGER.fine("Received result for goal id {0}", requestId);
+                            logger.fine("Received result for goal id {0}", requestId);
                             var result = pendingRequests.get(requestId);
                             GOAL_EXECUTION_TIME_METER.record(
                                     Duration.between(result.requestedAt, Instant.now()).toMillis(),
                                     metricAttributes);
                             var data = message.data().orElse(null);
                             if (data == null) {
-                                LOGGER.warning("RTPS message has no data in it, ignoring it");
+                                logger.warning("RTPS message has no data in it, ignoring it");
                                 return;
                             }
                             var response =
@@ -214,7 +218,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
                         } finally {
                             // request next message
                             getSubscription().get().request(1);
-                            LOGGER.exiting("onNext " + serviceName);
+                            logger.exiting("onNext " + serviceName);
                         }
                     }
 
@@ -226,7 +230,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
                                 .forEach(res -> res.future.completeExceptionally(throwable));
                     }
                 };
-        LOGGER.fine("Registering subscriber for {0} with type {1}", rmwTopicName, rmwMessageType);
+        logger.fine("Register subscriber for {0} with type {1}", rmwTopicName, rmwMessageType);
         var entityId =
                 rtpsTalkClient.subscribe(
                         rmwTopicName,
@@ -242,7 +246,7 @@ public class JRos2ServiceClientImpl<R extends Message, A extends Message> extend
         var rmwTopicName =
                 rosNameMapper.asFullyQualifiedDdsTopicName(serviceName, messageDescriptor);
         requestsPublisher = new SubmissionPublisher<RtpsTalkDataMessage>();
-        LOGGER.fine("Registering publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
+        logger.fine("Register publisher for {0} with type {1}", rmwTopicName, rmwMessageType);
         rtpsTalkClient.publish(
                 rmwTopicName,
                 rmwMessageType,

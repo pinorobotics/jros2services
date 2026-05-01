@@ -96,6 +96,10 @@ public class ThirdpartyClientExecutor implements ClientExecutor {
                             .thenApply(
                                     exitCode -> {
                                         try {
+                                            if (exitCode != 0) {
+                                                throw new RuntimeException(
+                                                        "Process exited with code " + exitCode);
+                                            }
                                             var actualOutput =
                                                     Files.readAllLines(logFile).stream()
                                                             .filter(l -> l.startsWith("[INFO]"))
@@ -107,10 +111,6 @@ public class ThirdpartyClientExecutor implements ClientExecutor {
                                                                                         + " to appear"))
                                                             .map(l -> l.replaceAll("\\[.*\\]", ""))
                                                             .collect(Collectors.joining("\n"));
-                                            if (exitCode != 0) {
-                                                throw new RuntimeException(
-                                                        "Process exited with code " + exitCode);
-                                            }
                                             return new Result(seed, actualOutput);
                                         } catch (Exception e) {
                                             throw new RuntimeException(e);
