@@ -20,6 +20,8 @@ package pinorobotics.jros2services;
 import id.jros2client.JRos2Client;
 import id.jros2client.impl.JRos2ClientImpl;
 import id.jros2client.impl.rmw.DdsNameMapper;
+import id.jros2client.qos.PublisherQos;
+import id.jros2client.qos.SubscriberQos;
 import id.jroscommon.RosName;
 import id.jrosmessages.Message;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +40,10 @@ public class JRos2ServicesFactory {
     private DdsNameMapper nameMapper = new DdsNameMapper();
 
     /**
-     * Create ROS2 Service client
+     * Create ROS2 Service client.
+     *
+     * <p>Service client uses {@link SubscriberQos#DEFAULT_SUBSCRIBER_QOS} and {@link
+     * PublisherQos#DEFAULT_PUBLISHER_QOS}.
      *
      * @param client ROS2 client
      * @param serviceDefinition type definitions for a service messages
@@ -90,9 +95,12 @@ public class JRos2ServicesFactory {
     }
 
     /**
-     * Create ROS2 Service
+     * Create ROS2 Service.
      *
      * <p>Service needs to be started explicitly with {@link JRos2Service#start()}.
+     *
+     * <p>Service uses {@link SubscriberQos#DEFAULT_SUBSCRIBER_QOS} and {@link
+     * PublisherQos#DEFAULT_PUBLISHER_QOS}.
      *
      * @param client ROS2 client
      * @param serviceDefinition type definitions for a service messages

@@ -88,14 +88,7 @@ public class JRos2ServiceIntegrationTests {
     @MethodSource("dataProvider")
     public void test_happy(ClientExecutor clientExecutor) throws Exception {
         /* --------------------------------------------------------------
-         * 1️⃣  Execute the third‑party client processes via the new
-         *     {@link ClientExecutor}.  The method returns a list of
-         *     {@link Future}s – each future completes with the captured log.
-         * -------------------------------------------------------------- */
-        List<Future<Result>> futures = clientExecutor.executeClientsAsync();
-
-        /* --------------------------------------------------------------
-         * 2️⃣  Start the ROS‑2 service that the clients call.
+         * 1️⃣  Start the ROS‑2 service that the clients call.
          * -------------------------------------------------------------- */
         try (var service =
                 new JRos2ServicesFactory()
@@ -104,7 +97,15 @@ public class JRos2ServiceIntegrationTests {
                                 new AddTwoIntsServiceDefinition(),
                                 SERVICE_NAME,
                                 this::proc)) {
+            // Clients must wait for the service to be ready because of the QOS policies used by
+            // default
             service.start();
+            /* --------------------------------------------------------------
+             * 2️⃣  Execute the third‑party client processes via the new
+             *     {@link ClientExecutor}.  The method returns a list of
+             *     {@link Future}s – each future completes with the captured log.
+             * -------------------------------------------------------------- */
+            List<Future<Result>> futures = clientExecutor.executeClientsAsync();
 
             /* --------------------------------------------------------------
              * 3️⃣  Wait for every client process to finish successfully.
